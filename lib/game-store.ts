@@ -1,129 +1,167 @@
 import { create } from 'zustand'
 
-export type ItemType = 'weapon' | 'food' | 'water' | 'medical' | 'material' | 'ammo'
-export type WeaponType = 'melee' | 'pistol' | 'rifle' | 'shotgun'
-export type BuildingType = 'storage' | 'workshop' | 'medical' | 'water' | 'farm' | 'barricade' | 'watchtower'
+// Types following The Last Stand: Dead Zone mechanics
+export type SurvivorClass = 'leader' | 'fighter' | 'medic' | 'scavenger' | 'engineer' | 'recon'
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'unique'
+export type WeaponType = 'melee' | 'pistol' | 'rifle' | 'shotgun' | 'smg' | 'assault'
+export type ResourceType = 'metal' | 'wood' | 'cloth' | 'food' | 'water' | 'ammo' | 'fuel'
+export type BuildingCategory = 'general' | 'storage' | 'production' | 'security' | 'comfort'
+export type MissionStatus = 'available' | 'in_progress' | 'returning' | 'completed' | 'failed'
+export type DangerLevel = 'low' | 'moderate' | 'dangerous' | 'high' | 'extreme'
 
-export interface Item {
-  id: string
-  name: string
-  type: ItemType
-  quantity: number
-  icon: string
-  damage?: number
-  healing?: number
-  weaponType?: WeaponType
+export interface Skills {
+  rangedCombat: number
+  meleeCombat: number
+  healing: number
+  movement: number
+  scavenging: number
+  luck: number
 }
 
 export interface Survivor {
   id: string
   name: string
-  health: number
-  maxHealth: number
-  hunger: number
-  thirst: number
-  energy: number
+  class: SurvivorClass
   level: number
   xp: number
   xpToNextLevel: number
-  skills: {
-    combat: number
-    scavenging: number
-    medical: number
-    engineering: number
-  }
+  health: number
+  maxHealth: number
+  morale: number
+  skills: Skills
+  injured: boolean
+  injuryType: string | null
+  injuryTimeLeft: number
   equipped: {
-    weapon: Item | null
-    armor: Item | null
+    offensive: { weapon: Weapon | null; gear: Item | null }
+    defensive: { weapon: Weapon | null; gear: Item | null }
   }
-  status: 'idle' | 'scavenging' | 'defending' | 'crafting' | 'resting' | 'injured'
-  avatar: string
+  status: 'idle' | 'mission' | 'defending' | 'building' | 'resting' | 'injured'
+  position: { x: number; y: number }
+  targetPosition: { x: number; y: number } | null
+  isMoving: boolean
+  direction: 'up' | 'down' | 'left' | 'right'
+}
+
+export interface Weapon {
+  id: string
+  name: string
+  type: WeaponType
+  level: number
+  damage: number
+  accuracy: number
+  fireRate: number
+  magazineSize: number
+  rarity: ItemRarity
+  dps: number
+}
+
+export interface Item {
+  id: string
+  name: string
+  type: 'weapon' | 'gear' | 'medical' | 'component' | 'book'
+  level: number
+  rarity: ItemRarity
+  quantity: number
+  effects?: Record<string, number>
 }
 
 export interface Building {
   id: string
-  type: BuildingType
+  category: BuildingCategory
+  type: string
   name: string
   level: number
   maxLevel: number
   health: number
   maxHealth: number
-  productionRate: number
-  upgrading: boolean
-  upgradeTimeLeft: number
+  constructing: boolean
+  constructionTimeLeft: number
+  position: { x: number; y: number }
+  size: { width: number; height: number }
+  assignedSurvivors: string[]
+  productionRate?: number
+  storageCapacity?: number
+  securityBonus?: number
+  comfortBonus?: number
 }
 
 export interface Mission {
   id: string
   name: string
-  description: string
   location: string
-  difficulty: 'easy' | 'medium' | 'hard' | 'extreme'
+  locationType: string
+  level: number
+  dangerLevel: DangerLevel
   duration: number
+  returnTime: number
   timeLeft: number
-  zombieCount: number
-  loot: { type: ItemType; min: number; max: number }[]
+  status: MissionStatus
   assignedSurvivors: string[]
-  status: 'available' | 'in_progress' | 'completed' | 'failed'
-  dangerLevel: number
+  possibleFinds: ResourceType[]
+  ammoRequired: number
+  zombieCount: number
+  isHighActivity: boolean
+  rewards: {
+    xp: number
+    resources: Partial<Record<ResourceType, { min: number; max: number }>>
+  }
 }
 
-export interface ZombieWave {
+export interface ZombieHorde {
   id: string
-  zombieCount: number
-  zombieHealth: number
-  zombieDamage: number
-  timeUntilArrival: number
-  status: 'approaching' | 'attacking' | 'defeated' | 'breached'
+  count: number
+  health: number
+  damage: number
+  timeUntilAttack: number
+  status: 'approaching' | 'attacking' | 'defeated'
+  position: { x: number; y: number }
 }
 
 export interface GameState {
-  // Resources
-  resources: {
-    food: number
-    water: number
-    materials: number
-    fuel: number
-    ammo: number
-    medicine: number
-  }
-  maxResources: {
-    food: number
-    water: number
-    materials: number
-    fuel: number
-    ammo: number
-    medicine: number
-  }
+  // Resources (following TLSDZ)
+  resources: Record<ResourceType, number>
+  maxResources: Record<ResourceType, number>
   
-  // Game stats
+  // Compound stats
   day: number
-  time: number // 0-24
+  hour: number
   isNight: boolean
-  baseDefense: number
-  maxBaseDefense: number
-  morale: number
+  securityRating: number
+  comfortRating: number
+  compoundLevel: number
   
   // Collections
   survivors: Survivor[]
+  leader: Survivor | null
   inventory: Item[]
+  weapons: Weapon[]
   buildings: Building[]
   availableMissions: Mission[]
   activeMissions: Mission[]
-  zombieWaves: ZombieWave[]
+  hordes: ZombieHorde[]
+  
+  // Junk piles (removable debris)
+  junkPiles: { id: string; position: { x: number; y: number }; timeToRemove: number }[]
   
   // Game state
   gameStarted: boolean
   gamePaused: boolean
   gameOver: boolean
   gameOverReason: string
-  notifications: { id: string; message: string; type: 'info' | 'warning' | 'danger' | 'success'; timestamp: number }[]
   
   // UI state
-  selectedTab: 'base' | 'survivors' | 'inventory' | 'missions' | 'map' | 'compound'
+  selectedTab: 'compound' | 'survivors' | 'inventory' | 'missions' | 'buildings' | 'crafting'
   selectedSurvivor: string | null
   selectedBuilding: string | null
-  combatLog: { id: string; message: string; timestamp: number }[]
+  notifications: { id: string; message: string; type: 'info' | 'warning' | 'danger' | 'success'; timestamp: number }[]
+  combatLog: { id: string; message: string; timestamp: number; type: 'kill' | 'damage' | 'heal' | 'event' }[]
+  
+  // Player position in compound
+  playerPosition: { x: number; y: number }
+  playerTargetPosition: { x: number; y: number } | null
+  playerMoving: boolean
+  playerDirection: 'up' | 'down' | 'left' | 'right'
   
   // Actions
   startGame: () => void
@@ -131,609 +169,846 @@ export interface GameState {
   resumeGame: () => void
   tick: () => void
   
+  // Player movement
+  setPlayerTarget: (pos: { x: number; y: number }) => void
+  updatePlayerPosition: () => void
+  
   // Resource actions
-  consumeResources: (resources: Partial<typeof initialResources>) => boolean
-  addResources: (resources: Partial<typeof initialResources>) => void
+  consumeResources: (resources: Partial<Record<ResourceType, number>>) => boolean
+  addResources: (resources: Partial<Record<ResourceType, number>>) => void
   
   // Survivor actions
-  addSurvivor: (survivor: Survivor) => void
-  removeSurvivor: (id: string) => void
-  updateSurvivor: (id: string, updates: Partial<Survivor>) => void
-  assignSurvivorToMission: (survivorId: string, missionId: string) => void
-  unassignSurvivorFromMission: (survivorId: string, missionId: string) => void
-  equipItem: (survivorId: string, item: Item) => void
-  
-  // Building actions
-  buildStructure: (type: BuildingType) => void
-  upgradeBuilding: (id: string) => void
-  repairBuilding: (id: string) => void
+  selectSurvivor: (id: string | null) => void
+  assignSurvivorClass: (id: string, survivorClass: SurvivorClass) => void
+  equipWeapon: (survivorId: string, weaponId: string, loadout: 'offensive' | 'defensive') => void
+  healSurvivor: (survivorId: string) => void
+  moveSurvivor: (survivorId: string, position: { x: number; y: number }) => void
   
   // Mission actions
-  startMission: (missionId: string) => void
+  assignToMission: (survivorId: string, missionId: string) => void
+  unassignFromMission: (survivorId: string, missionId: string) => void
+  launchMission: (missionId: string, automated: boolean) => void
   generateMissions: () => void
   
-  // Combat actions
-  defendBase: () => void
+  // Building actions
+  constructBuilding: (type: string, position: { x: number; y: number }) => void
+  upgradeBuilding: (id: string) => void
+  assignToBuilding: (survivorId: string, buildingId: string) => void
   
-  // Inventory actions
-  addItem: (item: Item) => void
-  removeItem: (id: string, quantity?: number) => void
-  useItem: (id: string, survivorId: string) => void
+  // Combat
+  defendCompound: () => void
   
   // UI actions
   setSelectedTab: (tab: GameState['selectedTab']) => void
-  setSelectedSurvivor: (id: string | null) => void
-  setSelectedBuilding: (id: string | null) => void
   addNotification: (message: string, type: 'info' | 'warning' | 'danger' | 'success') => void
   clearNotification: (id: string) => void
-  addCombatLog: (message: string) => void
+  addCombatLog: (message: string, type: 'kill' | 'damage' | 'heal' | 'event') => void
 }
 
-const initialResources = {
-  food: 50,
-  water: 50,
-  materials: 30,
-  fuel: 20,
-  ammo: 25,
-  medicine: 15
+const generateId = () => Math.random().toString(36).substring(2, 11)
+
+// Class skill bonuses (following TLSDZ class system)
+const classSkillBonuses: Record<SurvivorClass, Partial<Skills>> = {
+  leader: { rangedCombat: 2, meleeCombat: 2, healing: 1, movement: 1, scavenging: 1, luck: 1 },
+  fighter: { rangedCombat: 3, meleeCombat: 3, movement: 1, scavenging: 0, healing: 0, luck: 0 },
+  medic: { healing: 4, rangedCombat: 1, meleeCombat: 1, movement: 1, scavenging: 1, luck: 0 },
+  scavenger: { scavenging: 3, luck: 3, movement: 2, rangedCombat: 0, meleeCombat: 0, healing: 0 },
+  engineer: { scavenging: 2, rangedCombat: 1, meleeCombat: 1, movement: 1, healing: 0, luck: 1 },
+  recon: { movement: 3, rangedCombat: 2, scavenging: 1, meleeCombat: 1, healing: 0, luck: 1 },
 }
 
-const initialMaxResources = {
-  food: 100,
-  water: 100,
-  materials: 100,
-  fuel: 50,
-  ammo: 100,
-  medicine: 50
+// Weapon specializations by class
+const classWeaponSpecializations: Record<SurvivorClass, WeaponType[]> = {
+  leader: ['pistol', 'rifle', 'melee'],
+  fighter: ['assault', 'shotgun', 'smg'],
+  medic: ['pistol', 'smg'],
+  scavenger: ['pistol', 'melee'],
+  engineer: ['shotgun', 'pistol'],
+  recon: ['rifle', 'pistol'],
 }
 
 const survivorNames = [
-  'Marcus', 'Elena', 'Jack', 'Sarah', 'Mike', 'Lisa', 'Tom', 'Emma',
-  'David', 'Rachel', 'Chris', 'Anna', 'Steve', 'Maria', 'James', 'Kate'
+  'Marcus Webb', 'Elena Rodriguez', 'Jack Morrison', 'Sarah Chen', 
+  'Mike Thompson', 'Lisa Park', 'Tom Bradley', 'Emma Wilson',
+  'David Kim', 'Rachel Green', 'Chris Murphy', 'Anna Kowalski',
+  'Steve Johnson', 'Maria Santos', 'James Lee', 'Kate Miller',
+  'Alex Turner', 'Nina Petrov', 'Ryan Cole', 'Zoe Adams'
 ]
 
-const survivorAvatars = ['👨', '👩', '👴', '👵', '🧔', '👱‍♀️', '👨‍🦰', '👩‍🦰']
-
-const locationNames = [
-  'Abandoned Warehouse', 'Old Hospital', 'Police Station', 'Supermarket',
-  'Gas Station', 'Residential Area', 'School', 'Factory', 'Military Base',
-  'Shopping Mall', 'Parking Garage', 'Office Building', 'Pharmacy', 'Gun Store'
+const locationTypes = [
+  { type: 'warehouse', name: 'Warehouse', finds: ['metal', 'wood', 'cloth'] as ResourceType[] },
+  { type: 'hospital', name: 'Hospital', finds: ['cloth', 'water'] as ResourceType[] },
+  { type: 'police', name: 'Police Station', finds: ['ammo', 'metal'] as ResourceType[] },
+  { type: 'supermarket', name: 'Supermarket', finds: ['food', 'water'] as ResourceType[] },
+  { type: 'gas_station', name: 'Gas Station', finds: ['fuel', 'food'] as ResourceType[] },
+  { type: 'residential', name: 'Residential Area', finds: ['cloth', 'food', 'water'] as ResourceType[] },
+  { type: 'office', name: 'Office Building', finds: ['wood', 'cloth'] as ResourceType[] },
+  { type: 'factory', name: 'Factory', finds: ['metal', 'fuel'] as ResourceType[] },
+  { type: 'military', name: 'Military Outpost', finds: ['ammo', 'metal', 'fuel'] as ResourceType[] },
 ]
 
-const generateId = () => Math.random().toString(36).substr(2, 9)
-
-const createInitialSurvivor = (name?: string): Survivor => ({
-  id: generateId(),
-  name: name || survivorNames[Math.floor(Math.random() * survivorNames.length)],
-  health: 100,
-  maxHealth: 100,
-  hunger: 100,
-  thirst: 100,
-  energy: 100,
-  level: 1,
-  xp: 0,
-  xpToNextLevel: 100,
-  skills: {
-    combat: Math.floor(Math.random() * 3) + 1,
-    scavenging: Math.floor(Math.random() * 3) + 1,
-    medical: Math.floor(Math.random() * 3) + 1,
-    engineering: Math.floor(Math.random() * 3) + 1
-  },
-  equipped: {
-    weapon: null,
-    armor: null
-  },
-  status: 'idle',
-  avatar: survivorAvatars[Math.floor(Math.random() * survivorAvatars.length)]
-})
-
-const createMission = (difficulty: Mission['difficulty']): Mission => {
-  const difficultySettings = {
-    easy: { zombies: [3, 8], duration: [30, 60], danger: 20, lootMultiplier: 1 },
-    medium: { zombies: [8, 15], duration: [60, 120], danger: 45, lootMultiplier: 1.5 },
-    hard: { zombies: [15, 25], duration: [120, 180], danger: 70, lootMultiplier: 2 },
-    extreme: { zombies: [25, 40], duration: [180, 300], danger: 90, lootMultiplier: 3 }
+const createSurvivor = (name: string, isLeader: boolean = false): Survivor => {
+  const baseSkills: Skills = {
+    rangedCombat: Math.floor(Math.random() * 5) + 5,
+    meleeCombat: Math.floor(Math.random() * 5) + 5,
+    healing: Math.floor(Math.random() * 3) + 2,
+    movement: Math.floor(Math.random() * 5) + 8,
+    scavenging: Math.floor(Math.random() * 5) + 5,
+    luck: Math.floor(Math.random() * 5) + 3,
   }
-  
-  const settings = difficultySettings[difficulty]
-  const zombieCount = Math.floor(Math.random() * (settings.zombies[1] - settings.zombies[0])) + settings.zombies[0]
-  const duration = Math.floor(Math.random() * (settings.duration[1] - settings.duration[0])) + settings.duration[0]
-  
+
   return {
     id: generateId(),
-    name: `Scavenge ${locationNames[Math.floor(Math.random() * locationNames.length)]}`,
-    description: `Search the area for supplies. Expected zombie presence: ${zombieCount}`,
-    location: locationNames[Math.floor(Math.random() * locationNames.length)],
-    difficulty,
-    duration,
-    timeLeft: duration,
-    zombieCount,
-    loot: [
-      { type: 'food', min: Math.floor(5 * settings.lootMultiplier), max: Math.floor(15 * settings.lootMultiplier) },
-      { type: 'water', min: Math.floor(3 * settings.lootMultiplier), max: Math.floor(12 * settings.lootMultiplier) },
-      { type: 'material', min: Math.floor(5 * settings.lootMultiplier), max: Math.floor(20 * settings.lootMultiplier) },
-      { type: 'ammo', min: Math.floor(2 * settings.lootMultiplier), max: Math.floor(10 * settings.lootMultiplier) }
-    ],
-    assignedSurvivors: [],
-    status: 'available',
-    dangerLevel: settings.danger
+    name,
+    class: isLeader ? 'leader' : 'fighter',
+    level: isLeader ? 1 : 1,
+    xp: 0,
+    xpToNextLevel: 100,
+    health: 100,
+    maxHealth: 100,
+    morale: 75,
+    skills: baseSkills,
+    injured: false,
+    injuryType: null,
+    injuryTimeLeft: 0,
+    equipped: {
+      offensive: { weapon: null, gear: null },
+      defensive: { weapon: null, gear: null },
+    },
+    status: 'idle',
+    position: { x: 400 + Math.random() * 100 - 50, y: 300 + Math.random() * 100 - 50 },
+    targetPosition: null,
+    isMoving: false,
+    direction: 'down',
   }
 }
 
-const createInitialBuildings = (): Building[] => [
+const createWeapon = (level: number): Weapon => {
+  const weaponTypes: { type: WeaponType; names: string[]; baseDamage: number; baseAccuracy: number }[] = [
+    { type: 'melee', names: ['Baseball Bat', 'Machete', 'Fire Axe', 'Combat Knife', 'Crowbar'], baseDamage: 15, baseAccuracy: 90 },
+    { type: 'pistol', names: ['9mm Pistol', 'Glock 17', '.357 Magnum', 'M1911', 'Desert Eagle'], baseDamage: 20, baseAccuracy: 75 },
+    { type: 'rifle', names: ['Hunting Rifle', 'M14', 'Sniper Rifle', 'M1 Garand'], baseDamage: 45, baseAccuracy: 85 },
+    { type: 'shotgun', names: ['Pump Shotgun', 'Double Barrel', 'Combat Shotgun', 'SPAS-12'], baseDamage: 55, baseAccuracy: 60 },
+    { type: 'smg', names: ['UZI', 'MP5', 'MAC-10', 'P90'], baseDamage: 18, baseAccuracy: 65 },
+    { type: 'assault', names: ['M4A1', 'AK-47', 'SCAR-H', 'M16'], baseDamage: 30, baseAccuracy: 70 },
+  ]
+
+  const selectedType = weaponTypes[Math.floor(Math.random() * weaponTypes.length)]
+  const name = selectedType.names[Math.floor(Math.random() * selectedType.names.length)]
+  const rarity: ItemRarity = Math.random() < 0.6 ? 'common' : Math.random() < 0.85 ? 'uncommon' : Math.random() < 0.97 ? 'rare' : 'unique'
+  const rarityMultiplier = rarity === 'common' ? 1 : rarity === 'uncommon' ? 1.2 : rarity === 'rare' ? 1.5 : 2
+
+  const damage = Math.floor(selectedType.baseDamage * (1 + level * 0.1) * rarityMultiplier)
+  const accuracy = Math.min(95, Math.floor(selectedType.baseAccuracy * (1 + level * 0.02) * rarityMultiplier))
+  const fireRate = selectedType.type === 'melee' ? 1 : selectedType.type === 'rifle' ? 0.8 : selectedType.type === 'shotgun' ? 0.6 : 1.5
+
+  return {
+    id: generateId(),
+    name,
+    type: selectedType.type,
+    level,
+    damage,
+    accuracy,
+    fireRate,
+    magazineSize: selectedType.type === 'melee' ? 0 : selectedType.type === 'pistol' ? 12 : selectedType.type === 'shotgun' ? 8 : 30,
+    rarity,
+    dps: Math.floor(damage * fireRate),
+  }
+}
+
+const createMission = (compoundLevel: number): Mission => {
+  const location = locationTypes[Math.floor(Math.random() * locationTypes.length)]
+  const level = Math.max(1, compoundLevel + Math.floor(Math.random() * 3) - 1)
+  const isHighActivity = Math.random() < 0.15
+
+  const dangerLevels: DangerLevel[] = ['low', 'moderate', 'dangerous', 'high', 'extreme']
+  const dangerIndex = Math.min(4, Math.floor(level / 3) + (isHighActivity ? 1 : 0))
+  const dangerLevel = dangerLevels[dangerIndex]
+
+  const baseDuration = 5 + level * 2
+  const zombieBase = 5 + level * 3
+
+  return {
+    id: generateId(),
+    name: `${location.name} - Sector ${Math.floor(Math.random() * 9) + 1}`,
+    location: location.name,
+    locationType: location.type,
+    level,
+    dangerLevel,
+    duration: baseDuration * 60, // seconds
+    returnTime: Math.floor(baseDuration * 60 * 0.5), // 50% of mission time
+    timeLeft: 0,
+    status: 'available',
+    assignedSurvivors: [],
+    possibleFinds: location.finds,
+    ammoRequired: level * 5,
+    zombieCount: zombieBase + (isHighActivity ? Math.floor(zombieBase * 0.5) : 0),
+    isHighActivity,
+    rewards: {
+      xp: level * 50 * (isHighActivity ? 1.5 : 1),
+      resources: location.finds.reduce((acc, res) => {
+        acc[res] = { min: level * 3, max: level * 8 }
+        return acc
+      }, {} as Partial<Record<ResourceType, { min: number; max: number }>>),
+    },
+  }
+}
+
+const initialBuildings: Building[] = [
   {
     id: generateId(),
-    type: 'storage',
-    name: 'Storage Room',
+    category: 'general',
+    type: 'warehouse',
+    name: 'Warehouse',
     level: 1,
-    maxLevel: 5,
+    maxLevel: 1,
     health: 100,
     maxHealth: 100,
-    productionRate: 0,
-    upgrading: false,
-    upgradeTimeLeft: 0
+    constructing: false,
+    constructionTimeLeft: 0,
+    position: { x: 400, y: 280 },
+    size: { width: 200, height: 120 },
+    assignedSurvivors: [],
   },
   {
     id: generateId(),
-    type: 'barricade',
-    name: 'Barricade',
+    category: 'security',
+    type: 'rally_flag',
+    name: 'Rally Flag',
     level: 1,
     maxLevel: 5,
-    health: 100,
-    maxHealth: 100,
-    productionRate: 10,
-    upgrading: false,
-    upgradeTimeLeft: 0
-  }
+    health: 50,
+    maxHealth: 50,
+    constructing: false,
+    constructionTimeLeft: 0,
+    position: { x: 350, y: 420 },
+    size: { width: 40, height: 40 },
+    assignedSurvivors: [],
+    securityBonus: 5,
+  },
 ]
 
+const initialResources: Record<ResourceType, number> = {
+  metal: 100,
+  wood: 100,
+  cloth: 50,
+  food: 75,
+  water: 75,
+  ammo: 50,
+  fuel: 25,
+}
+
+const initialMaxResources: Record<ResourceType, number> = {
+  metal: 200,
+  wood: 200,
+  cloth: 150,
+  food: 150,
+  water: 150,
+  ammo: 100,
+  fuel: 50,
+}
+
 export const useGameStore = create<GameState>((set, get) => ({
-  // Initial state
   resources: { ...initialResources },
   maxResources: { ...initialMaxResources },
+  
   day: 1,
-  time: 8,
+  hour: 8,
   isNight: false,
-  baseDefense: 50,
-  maxBaseDefense: 100,
-  morale: 75,
-  survivors: [createInitialSurvivor('You'), createInitialSurvivor()],
-  inventory: [
-    { id: generateId(), name: 'Pistol', type: 'weapon', quantity: 1, icon: '🔫', damage: 15, weaponType: 'pistol' },
-    { id: generateId(), name: 'Baseball Bat', type: 'weapon', quantity: 1, icon: '🏏', damage: 10, weaponType: 'melee' },
-    { id: generateId(), name: 'First Aid Kit', type: 'medical', quantity: 3, icon: '🩹', healing: 30 },
-    { id: generateId(), name: 'Canned Food', type: 'food', quantity: 5, icon: '🥫' },
-    { id: generateId(), name: 'Water Bottle', type: 'water', quantity: 5, icon: '💧' }
-  ],
-  buildings: createInitialBuildings(),
-  availableMissions: [createMission('easy'), createMission('easy'), createMission('medium')],
+  securityRating: 10,
+  comfortRating: 5,
+  compoundLevel: 1,
+  
+  survivors: [],
+  leader: null,
+  inventory: [],
+  weapons: [createWeapon(1), createWeapon(1), createWeapon(1)],
+  buildings: [...initialBuildings],
+  availableMissions: [],
   activeMissions: [],
-  zombieWaves: [],
+  hordes: [],
+  junkPiles: [
+    { id: generateId(), position: { x: 200, y: 200 }, timeToRemove: 120 },
+    { id: generateId(), position: { x: 550, y: 180 }, timeToRemove: 90 },
+    { id: generateId(), position: { x: 180, y: 400 }, timeToRemove: 150 },
+    { id: generateId(), position: { x: 600, y: 420 }, timeToRemove: 100 },
+  ],
+  
   gameStarted: false,
   gamePaused: false,
   gameOver: false,
   gameOverReason: '',
-  notifications: [],
+  
   selectedTab: 'compound',
   selectedSurvivor: null,
   selectedBuilding: null,
+  notifications: [],
   combatLog: [],
   
-  // Game control actions
-  startGame: () => set({ gameStarted: true, gamePaused: false }),
+  playerPosition: { x: 400, y: 350 },
+  playerTargetPosition: null,
+  playerMoving: false,
+  playerDirection: 'down',
+  
+  startGame: () => {
+    const leader = createSurvivor('You', true)
+    const survivor1 = createSurvivor(survivorNames[Math.floor(Math.random() * survivorNames.length)])
+    
+    set({ 
+      gameStarted: true, 
+      gamePaused: false,
+      leader,
+      survivors: [leader, survivor1],
+      availableMissions: [createMission(1), createMission(1), createMission(1)],
+    })
+    
+    get().addNotification('Welcome to the Dead Zone. Survive.', 'info')
+  },
+  
   pauseGame: () => set({ gamePaused: true }),
   resumeGame: () => set({ gamePaused: false }),
   
-  tick: () => {
+  setPlayerTarget: (pos) => {
+    set({ playerTargetPosition: pos, playerMoving: true })
+  },
+  
+  updatePlayerPosition: () => {
     const state = get()
-    if (state.gamePaused || state.gameOver) return
-    
-    let newTime = state.time + 0.5
-    let newDay = state.day
-    let isNight = false
-    
-    if (newTime >= 24) {
-      newTime = 0
-      newDay += 1
-    }
-    
-    isNight = newTime >= 20 || newTime < 6
-    
-    // Consume resources
-    const foodConsumption = state.survivors.length * 0.3
-    const waterConsumption = state.survivors.length * 0.4
-    
-    const newResources = {
-      ...state.resources,
-      food: Math.max(0, state.resources.food - foodConsumption),
-      water: Math.max(0, state.resources.water - waterConsumption)
-    }
-    
-    // Update survivors
-    const newSurvivors = state.survivors.map(survivor => {
-      let newHunger = survivor.hunger - 1
-      let newThirst = survivor.thirst - 1.5
-      let newEnergy = survivor.energy
-      let newHealth = survivor.health
-      let newStatus = survivor.status
-      
-      if (survivor.status === 'resting') {
-        newEnergy = Math.min(100, survivor.energy + 5)
-        newHealth = Math.min(survivor.maxHealth, survivor.health + 1)
-        if (newEnergy >= 100) newStatus = 'idle'
-      }
-      
-      if (newHunger <= 0) {
-        newHealth -= 2
-        newHunger = 0
-      }
-      if (newThirst <= 0) {
-        newHealth -= 3
-        newThirst = 0
-      }
-      
-      if (newHealth <= 0) {
-        newStatus = 'injured'
-        newHealth = 0
-      }
-      
-      return {
-        ...survivor,
-        hunger: Math.max(0, Math.min(100, newHunger)),
-        thirst: Math.max(0, Math.min(100, newThirst)),
-        energy: Math.max(0, Math.min(100, newEnergy)),
-        health: Math.max(0, newHealth),
-        status: newStatus
-      }
-    })
-    
-    // Check for dead survivors
-    const deadSurvivors = newSurvivors.filter(s => s.health <= 0)
-    if (deadSurvivors.length > 0) {
-      deadSurvivors.forEach(s => {
-        get().addNotification(`${s.name} has died!`, 'danger')
+    if (!state.playerMoving || !state.playerTargetPosition) return
+
+    const dx = state.playerTargetPosition.x - state.playerPosition.x
+    const dy = state.playerTargetPosition.y - state.playerPosition.y
+    const distance = Math.sqrt(dx * dx + dy * dy)
+
+    if (distance < 3) {
+      set({ 
+        playerPosition: state.playerTargetPosition, 
+        playerMoving: false, 
+        playerTargetPosition: null 
       })
-    }
-    
-    const aliveSurvivors = newSurvivors.filter(s => s.health > 0)
-    
-    // Check game over conditions
-    if (aliveSurvivors.length === 0) {
-      set({ gameOver: true, gameOverReason: 'All survivors have perished.' })
       return
     }
+
+    const speed = 4
+    const ratio = speed / distance
+    const newDirection = Math.abs(dx) > Math.abs(dy) 
+      ? (dx > 0 ? 'right' : 'left') 
+      : (dy > 0 ? 'down' : 'up')
+
+    set({
+      playerPosition: {
+        x: state.playerPosition.x + dx * ratio,
+        y: state.playerPosition.y + dy * ratio,
+      },
+      playerDirection: newDirection as 'up' | 'down' | 'left' | 'right',
+    })
+  },
+  
+  tick: () => {
+    const state = get()
+    if (state.gamePaused || state.gameOver || !state.gameStarted) return
+
+    // Update player movement
+    get().updatePlayerPosition()
+
+    // Time progression
+    let newHour = state.hour + 0.1
+    let newDay = state.day
     
-    // Update missions
-    const newActiveMissions = state.activeMissions.map(mission => {
-      if (mission.status !== 'in_progress') return mission
+    if (newHour >= 24) {
+      newHour = 0
+      newDay += 1
+      get().generateMissions()
+    }
+    
+    const isNight = newHour >= 20 || newHour < 6
+
+    // Resource consumption (per game tick, scaled)
+    const survivorCount = state.survivors.filter(s => !s.injured).length
+    const foodConsumption = survivorCount * 0.05
+    const waterConsumption = survivorCount * 0.06
+
+    const newResources = { ...state.resources }
+    newResources.food = Math.max(0, newResources.food - foodConsumption)
+    newResources.water = Math.max(0, newResources.water - waterConsumption)
+
+    // Resource production from buildings
+    state.buildings.forEach(building => {
+      if (building.type === 'vegetable_garden' && building.productionRate) {
+        newResources.food = Math.min(state.maxResources.food, newResources.food + building.productionRate * 0.01)
+      }
+      if (building.type === 'water_collector' && building.productionRate) {
+        newResources.water = Math.min(state.maxResources.water, newResources.water + building.productionRate * 0.01)
+      }
+    })
+
+    // Survivor updates
+    const newSurvivors = state.survivors.map(survivor => {
+      const newSurvivor = { ...survivor }
       
-      const newTimeLeft = mission.timeLeft - 1
-      if (newTimeLeft <= 0) {
-        // Mission complete - calculate success
-        const assignedSurvivors = aliveSurvivors.filter(s => mission.assignedSurvivors.includes(s.id))
-        const totalCombat = assignedSurvivors.reduce((sum, s) => sum + s.skills.combat, 0)
-        const successChance = Math.min(90, 50 + totalCombat * 5 - mission.dangerLevel / 2)
+      // Heal over time if resting
+      if (survivor.status === 'resting' && survivor.health < survivor.maxHealth) {
+        newSurvivor.health = Math.min(survivor.maxHealth, survivor.health + 0.5)
+      }
+      
+      // Injury recovery
+      if (survivor.injured && survivor.injuryTimeLeft > 0) {
+        newSurvivor.injuryTimeLeft = survivor.injuryTimeLeft - 1
+        if (newSurvivor.injuryTimeLeft <= 0) {
+          newSurvivor.injured = false
+          newSurvivor.injuryType = null
+          newSurvivor.status = 'idle'
+          get().addNotification(`${survivor.name} has recovered from their injury.`, 'success')
+        }
+      }
+      
+      // Low morale from poor conditions
+      if (newResources.food < 20 || newResources.water < 20) {
+        newSurvivor.morale = Math.max(0, survivor.morale - 0.1)
+      }
+      
+      // Health damage from starvation/dehydration
+      if (newResources.food === 0) {
+        newSurvivor.health = Math.max(0, survivor.health - 0.2)
+      }
+      if (newResources.water === 0) {
+        newSurvivor.health = Math.max(0, survivor.health - 0.3)
+      }
+      
+      return newSurvivor
+    })
+
+    // Update active missions
+    const newActiveMissions = state.activeMissions.map(mission => {
+      if (mission.status !== 'in_progress' && mission.status !== 'returning') return mission
+      
+      const newMission = { ...mission, timeLeft: mission.timeLeft - 1 }
+      
+      if (mission.status === 'in_progress' && newMission.timeLeft <= 0) {
+        newMission.status = 'returning'
+        newMission.timeLeft = mission.returnTime
+        get().addNotification(`Mission to ${mission.location} complete. Survivors returning...`, 'info')
+      }
+      
+      if (mission.status === 'returning' && newMission.timeLeft <= 0) {
+        // Calculate mission success
+        const assignedSurvivors = newSurvivors.filter(s => mission.assignedSurvivors.includes(s.id))
+        const totalDPS = assignedSurvivors.reduce((sum, s) => {
+          const weapon = s.equipped.offensive.weapon
+          return sum + (weapon?.dps || 5) + s.skills.rangedCombat
+        }, 0)
+        
+        const successChance = Math.min(95, 50 + (totalDPS / mission.zombieCount) * 10)
         const success = Math.random() * 100 < successChance
         
         if (success) {
-          // Add loot
-          mission.loot.forEach(loot => {
-            const amount = Math.floor(Math.random() * (loot.max - loot.min)) + loot.min
-            if (loot.type === 'food') get().addResources({ food: amount })
-            else if (loot.type === 'water') get().addResources({ water: amount })
-            else if (loot.type === 'material') get().addResources({ materials: amount })
-            else if (loot.type === 'ammo') get().addResources({ ammo: amount })
+          // Grant rewards
+          Object.entries(mission.rewards.resources).forEach(([res, range]) => {
+            if (range) {
+              const amount = Math.floor(Math.random() * (range.max - range.min)) + range.min
+              get().addResources({ [res as ResourceType]: amount })
+            }
           })
           
-          // Add XP to survivors
+          // Grant XP
           assignedSurvivors.forEach(s => {
-            const xpGain = mission.difficulty === 'easy' ? 20 : mission.difficulty === 'medium' ? 40 : mission.difficulty === 'hard' ? 70 : 100
-            get().updateSurvivor(s.id, { 
-              xp: s.xp + xpGain,
+            const newXP = s.xp + mission.rewards.xp
+            const levelUp = newXP >= s.xpToNextLevel
+            get().updateSurvivorState(s.id, { 
+              xp: levelUp ? newXP - s.xpToNextLevel : newXP,
+              level: levelUp ? s.level + 1 : s.level,
+              xpToNextLevel: levelUp ? Math.floor(s.xpToNextLevel * 1.5) : s.xpToNextLevel,
               status: 'idle'
             })
+            if (levelUp) {
+              get().addNotification(`${s.name} leveled up to ${s.level + 1}!`, 'success')
+            }
           })
           
-          get().addNotification(`Mission "${mission.name}" completed successfully!`, 'success')
-          return { ...mission, status: 'completed' as const, timeLeft: 0 }
+          newMission.status = 'completed'
+          get().addNotification(`Mission to ${mission.location} successful!`, 'success')
         } else {
-          // Mission failed - survivors take damage
+          // Mission failed - survivors take injuries
           assignedSurvivors.forEach(s => {
-            const damage = Math.floor(Math.random() * 30) + 10
-            get().updateSurvivor(s.id, { 
-              health: Math.max(0, s.health - damage),
-              status: s.health - damage <= 0 ? 'injured' : 'idle'
+            const damage = Math.floor(Math.random() * 40) + 20
+            const injured = Math.random() < 0.5
+            get().updateSurvivorState(s.id, {
+              health: Math.max(1, s.health - damage),
+              injured,
+              injuryType: injured ? 'wound' : null,
+              injuryTimeLeft: injured ? 300 : 0,
+              status: injured ? 'injured' : 'idle'
             })
           })
           
-          get().addNotification(`Mission "${mission.name}" failed! Survivors took damage.`, 'danger')
-          return { ...mission, status: 'failed' as const, timeLeft: 0 }
+          newMission.status = 'failed'
+          get().addNotification(`Mission to ${mission.location} failed! Survivors wounded.`, 'danger')
         }
       }
       
-      return { ...mission, timeLeft: newTimeLeft }
-    })
-    
-    // Remove completed/failed missions and free survivors
-    const completedMissions = newActiveMissions.filter(m => m.status === 'completed' || m.status === 'failed')
-    completedMissions.forEach(mission => {
-      mission.assignedSurvivors.forEach(sId => {
-        const survivor = aliveSurvivors.find(s => s.id === sId)
-        if (survivor) {
-          get().updateSurvivor(sId, { status: 'idle' })
-        }
-      })
-    })
-    
-    // Random zombie wave at night
-    if (isNight && Math.random() < 0.05 && state.zombieWaves.length === 0) {
-      const waveSize = Math.floor(5 + state.day * 2 + Math.random() * 10)
-      const wave: ZombieWave = {
+      return newMission
+    }).filter(m => m.status !== 'completed' && m.status !== 'failed')
+
+    // Zombie horde spawning at night
+    if (isNight && Math.random() < 0.01 && state.hordes.length === 0) {
+      const hordeSize = Math.floor(10 + state.day * 3 + Math.random() * 10)
+      const angle = Math.random() * Math.PI * 2
+      const horde: ZombieHorde = {
         id: generateId(),
-        zombieCount: waveSize,
-        zombieHealth: 20 + state.day * 2,
-        zombieDamage: 5 + state.day,
-        timeUntilArrival: 30,
-        status: 'approaching'
+        count: hordeSize,
+        health: 20 + state.day * 2,
+        damage: 5 + Math.floor(state.day * 0.5),
+        timeUntilAttack: 60,
+        status: 'approaching',
+        position: {
+          x: 400 + Math.cos(angle) * 350,
+          y: 300 + Math.sin(angle) * 280,
+        },
       }
-      get().addNotification(`Zombie horde detected! ${waveSize} zombies approaching!`, 'danger')
-      set(s => ({ zombieWaves: [...s.zombieWaves, wave] }))
+      set(s => ({ hordes: [...s.hordes, horde] }))
+      get().addNotification(`ALERT: Zombie horde detected! ${hordeSize} infected approaching!`, 'danger')
+      get().addCombatLog(`Horde of ${hordeSize} zombies approaching from the ${angle < Math.PI ? 'south' : 'north'}`, 'event')
     }
-    
-    // Update zombie waves
-    const newZombieWaves = state.zombieWaves.map(wave => {
-      if (wave.status === 'approaching') {
-        const newTime = wave.timeUntilArrival - 1
+
+    // Process hordes
+    const newHordes = state.hordes.map(horde => {
+      if (horde.status === 'approaching') {
+        const newTime = horde.timeUntilAttack - 1
         if (newTime <= 0) {
-          get().addNotification('Zombies are attacking the base!', 'danger')
-          return { ...wave, timeUntilArrival: 0, status: 'attacking' as const }
+          get().addCombatLog('Zombies breaching the perimeter!', 'event')
+          return { ...horde, timeUntilAttack: 0, status: 'attacking' as const }
         }
-        return { ...wave, timeUntilArrival: newTime }
+        return { ...horde, timeUntilAttack: newTime }
       }
-      return wave
+      return horde
     })
-    
-    // Process attacking waves
-    const attackingWaves = newZombieWaves.filter(w => w.status === 'attacking')
-    let newBaseDefense = state.baseDefense
-    
-    attackingWaves.forEach(wave => {
-      // Defenders fight back
-      const defenders = aliveSurvivors.filter(s => s.status === 'defending' || s.status === 'idle')
-      const totalDamageToZombies = defenders.reduce((sum, s) => {
-        const weaponDamage = s.equipped.weapon?.damage || 5
-        return sum + weaponDamage + s.skills.combat * 2
-      }, 0)
+
+    // Combat resolution
+    const attackingHordes = newHordes.filter(h => h.status === 'attacking')
+    let totalSecurityDamage = 0
+
+    attackingHordes.forEach(horde => {
+      const defenders = newSurvivors.filter(s => 
+        s.status === 'defending' || (s.status === 'idle' && !s.injured)
+      )
       
-      // Zombies attack base
-      const damageToBase = wave.zombieCount * wave.zombieDamage * 0.1
-      newBaseDefense = Math.max(0, newBaseDefense - damageToBase)
+      // Defenders deal damage
+      let zombiesKilled = 0
+      defenders.forEach(defender => {
+        const weapon = defender.equipped.defensive.weapon || defender.equipped.offensive.weapon
+        const damage = (weapon?.dps || 5) + defender.skills.rangedCombat
+        const kills = Math.floor(damage / horde.health)
+        zombiesKilled += kills
+      })
       
-      // Kill zombies
-      const zombiesKilled = Math.floor(totalDamageToZombies / wave.zombieHealth)
-      wave.zombieCount = Math.max(0, wave.zombieCount - zombiesKilled)
+      horde.count = Math.max(0, horde.count - zombiesKilled)
       
       if (zombiesKilled > 0) {
-        get().addCombatLog(`Killed ${zombiesKilled} zombies!`)
+        get().addCombatLog(`Eliminated ${zombiesKilled} infected!`, 'kill')
       }
       
-      if (wave.zombieCount <= 0) {
-        wave.status = 'defeated'
-        get().addNotification('Zombie wave defeated!', 'success')
-        // Reward survivors
-        defenders.forEach(s => {
-          get().updateSurvivor(s.id, { xp: s.xp + 30 })
+      // Zombies deal damage to compound
+      if (horde.count > 0) {
+        totalSecurityDamage += horde.count * horde.damage * 0.05
+        get().addCombatLog(`${horde.count} zombies attacking the barricades!`, 'damage')
+      }
+      
+      if (horde.count <= 0) {
+        horde.status = 'defeated'
+        get().addNotification('Zombie horde eliminated!', 'success')
+        get().addCombatLog('All hostiles eliminated. Area secure.', 'event')
+        
+        // XP reward for defenders
+        defenders.forEach(d => {
+          get().updateSurvivorState(d.id, { xp: d.xp + 50 })
         })
       }
     })
+
+    // Apply security damage
+    const newSecurityRating = Math.max(0, state.securityRating - totalSecurityDamage)
     
-    // Check if base is breached
-    if (newBaseDefense <= 0) {
-      set({ gameOver: true, gameOverReason: 'The base defenses have been breached!' })
+    // Game over check
+    if (newSecurityRating <= 0 && attackingHordes.length > 0) {
+      set({ gameOver: true, gameOverReason: 'The compound has been overrun by the infected.' })
       return
     }
     
-    // Update morale based on conditions
-    let newMorale = state.morale
-    if (state.resources.food < 20) newMorale -= 1
-    if (state.resources.water < 20) newMorale -= 1
-    if (deadSurvivors.length > 0) newMorale -= 10
-    if (attackingWaves.length > 0) newMorale -= 2
-    newMorale = Math.max(0, Math.min(100, newMorale))
-    
+    if (newSurvivors.filter(s => s.health > 0).length === 0) {
+      set({ gameOver: true, gameOverReason: 'All survivors have perished.' })
+      return
+    }
+
     set({
-      time: newTime,
+      hour: newHour,
       day: newDay,
       isNight,
       resources: newResources,
-      survivors: aliveSurvivors,
-      activeMissions: newActiveMissions.filter(m => m.status === 'in_progress'),
-      zombieWaves: newZombieWaves.filter(w => w.status !== 'defeated'),
-      baseDefense: newBaseDefense,
-      morale: newMorale
+      survivors: newSurvivors,
+      activeMissions: newActiveMissions,
+      hordes: newHordes.filter(h => h.status !== 'defeated'),
+      securityRating: newSecurityRating,
     })
-    
-    // Generate new missions occasionally
-    if (newTime === 8 && state.availableMissions.length < 5) {
-      get().generateMissions()
-    }
+  },
+
+  updateSurvivorState: (id: string, updates: Partial<Survivor>) => {
+    set(state => ({
+      survivors: state.survivors.map(s => s.id === id ? { ...s, ...updates } : s)
+    }))
   },
   
-  // Resource actions
   consumeResources: (resources) => {
     const state = get()
     const canConsume = Object.entries(resources).every(([key, value]) => {
-      return state.resources[key as keyof typeof initialResources] >= (value || 0)
+      return state.resources[key as ResourceType] >= (value || 0)
     })
     
     if (!canConsume) return false
     
-    set({
-      resources: {
-        food: state.resources.food - (resources.food || 0),
-        water: state.resources.water - (resources.water || 0),
-        materials: state.resources.materials - (resources.materials || 0),
-        fuel: state.resources.fuel - (resources.fuel || 0),
-        ammo: state.resources.ammo - (resources.ammo || 0),
-        medicine: state.resources.medicine - (resources.medicine || 0)
-      }
+    const newResources = { ...state.resources }
+    Object.entries(resources).forEach(([key, value]) => {
+      newResources[key as ResourceType] -= value || 0
     })
+    
+    set({ resources: newResources })
     return true
   },
   
   addResources: (resources) => {
     const state = get()
+    const newResources = { ...state.resources }
+    Object.entries(resources).forEach(([key, value]) => {
+      newResources[key as ResourceType] = Math.min(
+        state.maxResources[key as ResourceType],
+        newResources[key as ResourceType] + (value || 0)
+      )
+    })
+    set({ resources: newResources })
+  },
+  
+  selectSurvivor: (id) => set({ selectedSurvivor: id }),
+  
+  assignSurvivorClass: (id, survivorClass) => {
+    const state = get()
+    const survivor = state.survivors.find(s => s.id === id)
+    if (!survivor || survivor.class === 'leader') return
+    
+    const bonuses = classSkillBonuses[survivorClass]
+    const newSkills = { ...survivor.skills }
+    Object.entries(bonuses).forEach(([skill, bonus]) => {
+      newSkills[skill as keyof Skills] += bonus || 0
+    })
+    
     set({
-      resources: {
-        food: Math.min(state.maxResources.food, state.resources.food + (resources.food || 0)),
-        water: Math.min(state.maxResources.water, state.resources.water + (resources.water || 0)),
-        materials: Math.min(state.maxResources.materials, state.resources.materials + (resources.materials || 0)),
-        fuel: Math.min(state.maxResources.fuel, state.resources.fuel + (resources.fuel || 0)),
-        ammo: Math.min(state.maxResources.ammo, state.resources.ammo + (resources.ammo || 0)),
-        medicine: Math.min(state.maxResources.medicine, state.resources.medicine + (resources.medicine || 0))
-      }
+      survivors: state.survivors.map(s => 
+        s.id === id ? { ...s, class: survivorClass, skills: newSkills } : s
+      )
+    })
+    
+    get().addNotification(`${survivor.name} is now a ${survivorClass}.`, 'info')
+  },
+  
+  equipWeapon: (survivorId, weaponId, loadout) => {
+    const state = get()
+    const weapon = state.weapons.find(w => w.id === weaponId)
+    if (!weapon) return
+    
+    set({
+      survivors: state.survivors.map(s => {
+        if (s.id !== survivorId) return s
+        return {
+          ...s,
+          equipped: {
+            ...s.equipped,
+            [loadout]: { ...s.equipped[loadout], weapon }
+          }
+        }
+      })
     })
   },
   
-  // Survivor actions
-  addSurvivor: (survivor) => set(state => ({ survivors: [...state.survivors, survivor] })),
-  
-  removeSurvivor: (id) => set(state => ({ 
-    survivors: state.survivors.filter(s => s.id !== id) 
-  })),
-  
-  updateSurvivor: (id, updates) => set(state => ({
-    survivors: state.survivors.map(s => s.id === id ? { ...s, ...updates } : s)
-  })),
-  
-  assignSurvivorToMission: (survivorId, missionId) => {
+  healSurvivor: (survivorId) => {
     const state = get()
-    const mission = state.availableMissions.find(m => m.id === missionId) || 
-                    state.activeMissions.find(m => m.id === missionId)
-    
-    if (!mission || mission.assignedSurvivors.includes(survivorId)) return
-    
-    if (mission.status === 'available') {
-      set({
-        availableMissions: state.availableMissions.map(m => 
-          m.id === missionId 
-            ? { ...m, assignedSurvivors: [...m.assignedSurvivors, survivorId] }
-            : m
-        )
-      })
+    if (!state.consumeResources({ food: 5, water: 5 })) {
+      get().addNotification('Not enough resources to heal.', 'warning')
+      return
     }
     
-    get().updateSurvivor(survivorId, { status: 'scavenging' })
+    set({
+      survivors: state.survivors.map(s => 
+        s.id === survivorId 
+          ? { ...s, health: Math.min(s.maxHealth, s.health + 30) }
+          : s
+      )
+    })
+  },
+
+  moveSurvivor: (survivorId, position) => {
+    set({
+      survivors: get().survivors.map(s =>
+        s.id === survivorId
+          ? { ...s, targetPosition: position, isMoving: true }
+          : s
+      )
+    })
   },
   
-  unassignSurvivorFromMission: (survivorId, missionId) => {
+  assignToMission: (survivorId, missionId) => {
     const state = get()
+    const mission = state.availableMissions.find(m => m.id === missionId)
+    const survivor = state.survivors.find(s => s.id === survivorId)
+    
+    if (!mission || !survivor) return
+    if (survivor.injured || survivor.status === 'mission') return
+    if (mission.assignedSurvivors.length >= 5) return
+    if (mission.assignedSurvivors.includes(survivorId)) return
     
     set({
-      availableMissions: state.availableMissions.map(m => 
-        m.id === missionId 
+      availableMissions: state.availableMissions.map(m =>
+        m.id === missionId
+          ? { ...m, assignedSurvivors: [...m.assignedSurvivors, survivorId] }
+          : m
+      )
+    })
+  },
+  
+  unassignFromMission: (survivorId, missionId) => {
+    set({
+      availableMissions: get().availableMissions.map(m =>
+        m.id === missionId
           ? { ...m, assignedSurvivors: m.assignedSurvivors.filter(id => id !== survivorId) }
           : m
       )
     })
-    
-    get().updateSurvivor(survivorId, { status: 'idle' })
   },
   
-  equipItem: (survivorId, item) => {
-    if (item.type !== 'weapon') return
-    
-    set(state => ({
-      survivors: state.survivors.map(s => 
-        s.id === survivorId 
-          ? { ...s, equipped: { ...s.equipped, weapon: item } }
-          : s
-      )
-    }))
-  },
-  
-  // Building actions
-  buildStructure: (type) => {
+  launchMission: (missionId, automated) => {
     const state = get()
-    const buildingCosts: Record<BuildingType, { materials: number; fuel: number }> = {
-      storage: { materials: 30, fuel: 5 },
-      workshop: { materials: 50, fuel: 10 },
-      medical: { materials: 40, fuel: 5 },
-      water: { materials: 35, fuel: 10 },
-      farm: { materials: 25, fuel: 5 },
-      barricade: { materials: 20, fuel: 0 },
-      watchtower: { materials: 45, fuel: 5 }
-    }
+    const mission = state.availableMissions.find(m => m.id === missionId)
     
-    const cost = buildingCosts[type]
-    if (!get().consumeResources({ materials: cost.materials, fuel: cost.fuel })) {
-      get().addNotification('Not enough resources to build!', 'warning')
+    if (!mission || mission.assignedSurvivors.length === 0) {
+      get().addNotification('Assign at least one survivor to the mission.', 'warning')
       return
     }
     
-    const buildingNames: Record<BuildingType, string> = {
-      storage: 'Storage Room',
-      workshop: 'Workshop',
-      medical: 'Medical Bay',
-      water: 'Water Collector',
-      farm: 'Farm',
-      barricade: 'Barricade',
-      watchtower: 'Watchtower'
+    // Check ammo
+    if (!state.consumeResources({ ammo: mission.ammoRequired })) {
+      get().addNotification('Not enough ammunition for this mission.', 'warning')
+      return
     }
+    
+    const launchedMission: Mission = {
+      ...mission,
+      status: 'in_progress',
+      timeLeft: automated ? Math.floor(mission.duration * 1.5) : mission.duration,
+    }
+    
+    // Update survivor status
+    set({
+      survivors: state.survivors.map(s =>
+        mission.assignedSurvivors.includes(s.id)
+          ? { ...s, status: 'mission' }
+          : s
+      ),
+      availableMissions: state.availableMissions.filter(m => m.id !== missionId),
+      activeMissions: [...state.activeMissions, launchedMission],
+    })
+    
+    get().addNotification(`Mission to ${mission.location} launched!`, 'info')
+    get().addCombatLog(`Team deployed to ${mission.location}`, 'event')
+  },
+  
+  generateMissions: () => {
+    const state = get()
+    if (state.availableMissions.length >= 6) return
+    
+    const newMissions = []
+    const count = 6 - state.availableMissions.length
+    
+    for (let i = 0; i < count; i++) {
+      newMissions.push(createMission(state.compoundLevel))
+    }
+    
+    set({ availableMissions: [...state.availableMissions, ...newMissions] })
+  },
+  
+  constructBuilding: (type, position) => {
+    const state = get()
+    
+    const buildingCosts: Record<string, Partial<Record<ResourceType, number>>> = {
+      small_barricade: { wood: 20, metal: 10 },
+      large_barricade: { wood: 40, metal: 25 },
+      watchtower: { wood: 50, metal: 30 },
+      bed: { wood: 15, cloth: 20 },
+      vegetable_garden: { wood: 30 },
+      water_collector: { metal: 25, wood: 15 },
+      metal_storage: { metal: 40, wood: 20 },
+      food_storage: { wood: 35, metal: 15 },
+    }
+    
+    const cost = buildingCosts[type]
+    if (!cost || !state.consumeResources(cost)) {
+      get().addNotification('Not enough resources to construct this building.', 'warning')
+      return
+    }
+    
+    const buildingData: Record<string, Partial<Building>> = {
+      small_barricade: { category: 'security', name: 'Small Barricade', maxLevel: 5, securityBonus: 8 },
+      large_barricade: { category: 'security', name: 'Large Barricade', maxLevel: 5, securityBonus: 15 },
+      watchtower: { category: 'security', name: 'Watchtower', maxLevel: 5, securityBonus: 20 },
+      bed: { category: 'comfort', name: 'Bed', maxLevel: 3, comfortBonus: 5 },
+      vegetable_garden: { category: 'production', name: 'Vegetable Garden', maxLevel: 3, productionRate: 2 },
+      water_collector: { category: 'production', name: 'Water Collector', maxLevel: 3, productionRate: 2 },
+      metal_storage: { category: 'storage', name: 'Metal Storage', maxLevel: 3, storageCapacity: 100 },
+      food_storage: { category: 'storage', name: 'Food Storage', maxLevel: 3, storageCapacity: 75 },
+    }
+    
+    const data = buildingData[type]
     
     const newBuilding: Building = {
       id: generateId(),
+      category: data?.category || 'general',
       type,
-      name: buildingNames[type],
+      name: data?.name || type,
       level: 1,
-      maxLevel: 5,
+      maxLevel: data?.maxLevel || 5,
       health: 100,
       maxHealth: 100,
-      productionRate: type === 'barricade' ? 10 : type === 'watchtower' ? 5 : 0,
-      upgrading: false,
-      upgradeTimeLeft: 0
+      constructing: true,
+      constructionTimeLeft: 60,
+      position,
+      size: { width: 60, height: 60 },
+      assignedSurvivors: [],
+      securityBonus: data?.securityBonus,
+      comfortBonus: data?.comfortBonus,
+      productionRate: data?.productionRate,
+      storageCapacity: data?.storageCapacity,
     }
     
-    set(s => ({ buildings: [...s.buildings, newBuilding] }))
-    get().addNotification(`${buildingNames[type]} has been built!`, 'success')
-    
-    // Update max resources if storage
-    if (type === 'storage') {
-      set(s => ({
-        maxResources: {
-          ...s.maxResources,
-          food: s.maxResources.food + 50,
-          water: s.maxResources.water + 50,
-          materials: s.maxResources.materials + 50
-        }
-      }))
-    }
-    
-    // Update base defense if barricade/watchtower
-    if (type === 'barricade' || type === 'watchtower') {
-      const bonus = type === 'barricade' ? 15 : 10
-      set(s => ({
-        baseDefense: Math.min(s.maxBaseDefense, s.baseDefense + bonus),
-        maxBaseDefense: s.maxBaseDefense + bonus
-      }))
-    }
+    set({ buildings: [...state.buildings, newBuilding] })
+    get().addNotification(`Constructing ${newBuilding.name}...`, 'info')
   },
   
   upgradeBuilding: (id) => {
     const state = get()
     const building = state.buildings.find(b => b.id === id)
+    
     if (!building || building.level >= building.maxLevel) return
     
-    const upgradeCost = { materials: building.level * 20, fuel: building.level * 5 }
-    if (!get().consumeResources(upgradeCost)) {
-      get().addNotification('Not enough resources to upgrade!', 'warning')
+    const upgradeCost = {
+      metal: building.level * 20,
+      wood: building.level * 15,
+    }
+    
+    if (!state.consumeResources(upgradeCost)) {
+      get().addNotification('Not enough resources to upgrade.', 'warning')
       return
     }
     
     set({
-      buildings: state.buildings.map(b => 
-        b.id === id 
-          ? { ...b, level: b.level + 1, maxHealth: b.maxHealth + 20, health: b.maxHealth + 20 }
+      buildings: state.buildings.map(b =>
+        b.id === id
+          ? { ...b, level: b.level + 1, maxHealth: b.maxHealth + 20 }
           : b
       )
     })
@@ -741,153 +1016,55 @@ export const useGameStore = create<GameState>((set, get) => ({
     get().addNotification(`${building.name} upgraded to level ${building.level + 1}!`, 'success')
   },
   
-  repairBuilding: (id) => {
+  assignToBuilding: (survivorId, buildingId) => {
     const state = get()
-    const building = state.buildings.find(b => b.id === id)
-    if (!building || building.health >= building.maxHealth) return
-    
-    const repairCost = Math.ceil((building.maxHealth - building.health) / 10)
-    if (!get().consumeResources({ materials: repairCost })) {
-      get().addNotification('Not enough materials to repair!', 'warning')
-      return
-    }
-    
     set({
-      buildings: state.buildings.map(b => 
-        b.id === id ? { ...b, health: b.maxHealth } : b
+      buildings: state.buildings.map(b =>
+        b.id === buildingId
+          ? { ...b, assignedSurvivors: [...b.assignedSurvivors, survivorId] }
+          : b
+      ),
+      survivors: state.survivors.map(s =>
+        s.id === survivorId
+          ? { ...s, status: 'defending' }
+          : s
       )
     })
-    
-    get().addNotification(`${building.name} repaired!`, 'success')
   },
   
-  // Mission actions
-  startMission: (missionId) => {
+  defendCompound: () => {
     const state = get()
-    const mission = state.availableMissions.find(m => m.id === missionId)
-    
-    if (!mission || mission.assignedSurvivors.length === 0) {
-      get().addNotification('Assign at least one survivor to this mission!', 'warning')
-      return
-    }
-    
-    set({
-      availableMissions: state.availableMissions.filter(m => m.id !== missionId),
-      activeMissions: [...state.activeMissions, { ...mission, status: 'in_progress' }]
-    })
-    
-    get().addNotification(`Mission "${mission.name}" has started!`, 'info')
-  },
-  
-  generateMissions: () => {
-    const state = get()
-    const difficulties: Mission['difficulty'][] = ['easy', 'easy', 'medium', 'medium', 'hard']
-    if (state.day > 5) difficulties.push('hard')
-    if (state.day > 10) difficulties.push('extreme')
-    
-    const newMissions = Array.from({ length: 2 }, () => {
-      const difficulty = difficulties[Math.floor(Math.random() * difficulties.length)]
-      return createMission(difficulty)
-    })
-    
-    set(s => ({ 
-      availableMissions: [...s.availableMissions.slice(-3), ...newMissions].slice(0, 5)
-    }))
-  },
-  
-  defendBase: () => {
-    const state = get()
-    const idleSurvivors = state.survivors.filter(s => s.status === 'idle')
+    const idleSurvivors = state.survivors.filter(s => s.status === 'idle' && !s.injured)
     
     idleSurvivors.forEach(s => {
-      get().updateSurvivor(s.id, { status: 'defending' })
+      set({
+        survivors: state.survivors.map(surv =>
+          surv.id === s.id ? { ...surv, status: 'defending' } : surv
+        )
+      })
     })
     
-    if (idleSurvivors.length > 0) {
-      get().addNotification(`${idleSurvivors.length} survivors are now defending the base!`, 'info')
-    }
+    get().addNotification(`${idleSurvivors.length} survivors assigned to defense.`, 'info')
   },
   
-  // Inventory actions
-  addItem: (item) => set(state => {
-    const existing = state.inventory.find(i => i.name === item.name)
-    if (existing) {
-      return {
-        inventory: state.inventory.map(i => 
-          i.name === item.name ? { ...i, quantity: i.quantity + item.quantity } : i
-        )
-      }
-    }
-    return { inventory: [...state.inventory, item] }
-  }),
-  
-  removeItem: (id, quantity = 1) => set(state => {
-    const item = state.inventory.find(i => i.id === id)
-    if (!item) return state
-    
-    if (item.quantity <= quantity) {
-      return { inventory: state.inventory.filter(i => i.id !== id) }
-    }
-    return {
-      inventory: state.inventory.map(i => 
-        i.id === id ? { ...i, quantity: i.quantity - quantity } : i
-      )
-    }
-  }),
-  
-  useItem: (itemId, survivorId) => {
-    const state = get()
-    const item = state.inventory.find(i => i.id === itemId)
-    const survivor = state.survivors.find(s => s.id === survivorId)
-    
-    if (!item || !survivor) return
-    
-    if (item.type === 'medical' && item.healing) {
-      get().updateSurvivor(survivorId, {
-        health: Math.min(survivor.maxHealth, survivor.health + item.healing)
-      })
-      get().removeItem(itemId, 1)
-      get().addNotification(`${survivor.name} used ${item.name}`, 'info')
-    } else if (item.type === 'food') {
-      get().updateSurvivor(survivorId, {
-        hunger: Math.min(100, survivor.hunger + 30)
-      })
-      get().removeItem(itemId, 1)
-    } else if (item.type === 'water') {
-      get().updateSurvivor(survivorId, {
-        thirst: Math.min(100, survivor.thirst + 30)
-      })
-      get().removeItem(itemId, 1)
-    } else if (item.type === 'weapon') {
-      get().equipItem(survivorId, item)
-    }
-  },
-  
-  // UI actions
   setSelectedTab: (tab) => set({ selectedTab: tab }),
-  setSelectedSurvivor: (id) => set({ selectedSurvivor: id }),
-  setSelectedBuilding: (id) => set({ selectedBuilding: id }),
   
   addNotification: (message, type) => {
-    const id = generateId()
-    set(state => ({
-      notifications: [...state.notifications, { id, message, type, timestamp: Date.now() }].slice(-5)
-    }))
+    const notification = { id: generateId(), message, type, timestamp: Date.now() }
+    set(state => ({ notifications: [notification, ...state.notifications].slice(0, 10) }))
     
     // Auto-remove after 5 seconds
     setTimeout(() => {
-      get().clearNotification(id)
+      get().clearNotification(notification.id)
     }, 5000)
   },
   
-  clearNotification: (id) => set(state => ({
-    notifications: state.notifications.filter(n => n.id !== id)
-  })),
+  clearNotification: (id) => {
+    set(state => ({ notifications: state.notifications.filter(n => n.id !== id) }))
+  },
   
-  addCombatLog: (message) => {
-    const id = generateId()
-    set(state => ({
-      combatLog: [...state.combatLog, { id, message, timestamp: Date.now() }].slice(-20)
-    }))
-  }
+  addCombatLog: (message, type) => {
+    const log = { id: generateId(), message, timestamp: Date.now(), type }
+    set(state => ({ combatLog: [log, ...state.combatLog].slice(0, 50) }))
+  },
 }))
