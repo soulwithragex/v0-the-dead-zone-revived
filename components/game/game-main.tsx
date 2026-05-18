@@ -11,11 +11,13 @@ import { CombatPanel } from './combat-panel'
 import { NotificationSystem } from './notification-system'
 import { GameOverScreen } from './game-over-screen'
 import { StartScreen } from './start-screen'
+import { CompoundMap } from './compound-map'
 import { 
   Home, 
   Users, 
   Package, 
-  Map, 
+  Map,
+  Crosshair,
   Shield,
   Sun,
   Moon,
@@ -67,6 +69,7 @@ export function GameMain() {
   }
 
   const tabs = [
+    { id: 'compound', label: 'Compound', icon: Crosshair },
     { id: 'base', label: 'Base', icon: Home },
     { id: 'survivors', label: 'Survivors', icon: Users },
     { id: 'inventory', label: 'Inventory', icon: Package },
@@ -173,6 +176,7 @@ export function GameMain() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main panel */}
           <div className="lg:col-span-2">
+            {selectedTab === 'compound' && <CompoundMap />}
             {selectedTab === 'base' && <BuildingPanel />}
             {selectedTab === 'survivors' && <SurvivorPanel />}
             {selectedTab === 'inventory' && <InventoryPanel />}

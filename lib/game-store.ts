@@ -120,7 +120,7 @@ export interface GameState {
   notifications: { id: string; message: string; type: 'info' | 'warning' | 'danger' | 'success'; timestamp: number }[]
   
   // UI state
-  selectedTab: 'base' | 'survivors' | 'inventory' | 'missions' | 'map'
+  selectedTab: 'base' | 'survivors' | 'inventory' | 'missions' | 'map' | 'compound'
   selectedSurvivor: string | null
   selectedBuilding: string | null
   combatLog: { id: string; message: string; timestamp: number }[]
@@ -314,7 +314,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   gameOver: false,
   gameOverReason: '',
   notifications: [],
-  selectedTab: 'base',
+  selectedTab: 'compound',
   selectedSurvivor: null,
   selectedBuilding: null,
   combatLog: [],

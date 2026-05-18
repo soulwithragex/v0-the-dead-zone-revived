@@ -152,3 +152,32 @@
 .zombie-animate {
   animation: zombie-walk 0.5s ease-in-out infinite;
 }
+
+/* Player arm swing animations */
+@keyframes swing-arm {
+  0%, 100% { transform: rotate(-20deg); }
+  50% { transform: rotate(20deg); }
+}
+
+@keyframes swing-arm-reverse {
+  0%, 100% { transform: rotate(20deg); }
+  50% { transform: rotate(-20deg); }
+}
+
+.animate-swing-arm {
+  animation: swing-arm 0.3s ease-in-out infinite;
+}
+
+.animate-swing-arm-reverse {
+  animation: swing-arm-reverse 0.3s ease-in-out infinite;
+}
+
+/* Click ripple effect */
+@keyframes click-ripple {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.click-ripple {
+  animation: click-ripple 0.5s ease-out forwards;
+}
