@@ -1,234 +1,245 @@
-'use client'
+"use client"
 
-import { useGameStore, type BuildingType } from '@/lib/game-store'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useGameStore } from '@/lib/game-store'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import { 
-  Package, 
+  Hammer, 
+  ArrowUp, 
   Wrench, 
-  Plus, 
-  Droplets, 
-  Wheat, 
+  AlertTriangle,
+  CheckCircle,
+  Lock,
+  Package,
   Shield,
   Eye,
-  ArrowUp,
-  Hammer
+  Droplets,
+  Wheat,
+  Cross,
+  Settings
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-const buildingIcons: Record<BuildingType, typeof Package> = {
-  storage: Package,
-  workshop: Wrench,
-  medical: Plus,
-  water: Droplets,
-  farm: Wheat,
-  barricade: Shield,
-  watchtower: Eye
+const BUILDING_DESCRIPTIONS: Record<string, string> = {
+  storage: "Increases maximum resource capacity for all materials.",
+  barricade: "Defensive structure that slows and damages attacking infected.",
+  watchtower: "Increases base defense and provides early warning of attacks.",
+  farm: "Produces food over time. Higher levels increase production rate.",
+  water: "Collects and purifies water. Essential for survivor hydration.",
+  medical: "Heals injured survivors and produces medical supplies.",
+  workshop: "Required for crafting weapons, gear, and base upgrades.",
 }
 
-const buildingDescriptions: Record<BuildingType, string> = {
-  storage: 'Increases max resource capacity',
-  workshop: 'Allows crafting items',
-  medical: 'Heals survivors over time',
-  water: 'Produces water automatically',
-  farm: 'Produces food automatically',
-  barricade: 'Increases base defense',
-  watchtower: 'Early zombie detection'
-}
-
-const buildingCosts: Record<BuildingType, { materials: number; fuel: number }> = {
-  storage: { materials: 30, fuel: 5 },
-  workshop: { materials: 50, fuel: 10 },
-  medical: { materials: 40, fuel: 5 },
-  water: { materials: 35, fuel: 10 },
-  farm: { materials: 25, fuel: 5 },
-  barricade: { materials: 20, fuel: 0 },
-  watchtower: { materials: 45, fuel: 5 }
+const BUILDING_ICONS: Record<string, React.ReactNode> = {
+  storage: <Package className="w-5 h-5" />,
+  barricade: <Shield className="w-5 h-5" />,
+  watchtower: <Eye className="w-5 h-5" />,
+  farm: <Wheat className="w-5 h-5" />,
+  water: <Droplets className="w-5 h-5" />,
+  medical: <Cross className="w-5 h-5" />,
+  workshop: <Settings className="w-5 h-5" />,
 }
 
 export function BuildingPanel() {
   const { 
     buildings, 
     resources,
-    buildStructure, 
     upgradeBuilding, 
     repairBuilding,
-    selectedBuilding,
-    setSelectedBuilding
+    day 
   } = useGameStore()
 
-  const availableBuildings: BuildingType[] = ['storage', 'barricade', 'watchtower', 'farm', 'water', 'medical', 'workshop']
+  const canAffordUpgrade = (building: typeof buildings[0]) => {
+    const baseCost = 30 + (building.level * 15)
+    const fuelCost = 5 + (building.level * 3)
+    return resources.materials >= baseCost && resources.fuel >= fuelCost
+  }
 
-  const canAfford = (type: BuildingType) => {
-    const cost = buildingCosts[type]
-    return resources.materials >= cost.materials && resources.fuel >= cost.fuel
+  const canAffordRepair = (building: typeof buildings[0]) => {
+    const repairCost = Math.ceil((building.maxHealth - building.health) * 0.3)
+    return resources.materials >= repairCost
+  }
+
+  const getUpgradeCost = (building: typeof buildings[0]) => {
+    return {
+      materials: 30 + (building.level * 15),
+      fuel: 5 + (building.level * 3)
+    }
+  }
+
+  const getRepairCost = (building: typeof buildings[0]) => {
+    return Math.ceil((building.maxHealth - building.health) * 0.3)
+  }
+
+  const getHealthBarColor = (health: number, maxHealth: number) => {
+    const percent = (health / maxHealth) * 100
+    if (percent <= 25) return 'bg-red-600'
+    if (percent <= 50) return 'bg-orange-500'
+    if (percent <= 75) return 'bg-yellow-500'
+    return 'bg-green-600'
+  }
+
+  const getStatusText = (health: number, maxHealth: number) => {
+    const percent = (health / maxHealth) * 100
+    if (percent <= 25) return { text: 'CRITICAL', color: 'text-red-500' }
+    if (percent <= 50) return { text: 'DAMAGED', color: 'text-orange-500' }
+    if (percent <= 75) return { text: 'WORN', color: 'text-yellow-500' }
+    return { text: 'OPERATIONAL', color: 'text-green-500' }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Current buildings */}
-      <div>
-        <h2 className="text-xl font-bold text-foreground mb-4">Your Base</h2>
-        
-        {buildings.length === 0 ? (
-          <Card className="bg-secondary/30 border-dashed">
-            <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">No buildings constructed yet</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {buildings.map((building) => {
-              const Icon = buildingIcons[building.type]
-              const isSelected = selectedBuilding === building.id
-              const needsRepair = building.health < building.maxHealth
-              
-              return (
-                <Card 
-                  key={building.id}
-                  className={cn(
-                    "cursor-pointer transition-all hover:border-primary/50",
-                    isSelected && "border-primary ring-1 ring-primary/30",
-                    needsRepair && "border-destructive/50"
-                  )}
-                  onClick={() => setSelectedBuilding(building.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "p-2 rounded-lg",
-                        needsRepair ? "bg-destructive/20" : "bg-primary/20"
-                      )}>
-                        <Icon className={cn(
-                          "w-5 h-5",
-                          needsRepair ? "text-destructive" : "text-primary"
-                        )} />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-semibold text-foreground truncate">{building.name}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            Lv.{building.level}
-                          </Badge>
-                        </div>
-
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {buildingDescriptions[building.type]}
-                        </p>
-
-                        {/* Health bar */}
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Health</span>
-                            <span>{building.health}/{building.maxHealth}</span>
-                          </div>
-                          <Progress 
-                            value={(building.health / building.maxHealth) * 100}
-                            className={cn(
-                              "h-1.5",
-                              needsRepair && "[&>div]:bg-destructive"
-                            )}
-                          />
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2 mt-3">
-                          {needsRepair && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                repairBuilding(building.id)
-                              }}
-                            >
-                              <Hammer className="w-3 h-3 mr-1" />
-                              Repair
-                            </Button>
-                          )}
-                          {building.level < building.maxLevel && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                upgradeBuilding(building.id)
-                              }}
-                            >
-                              <ArrowUp className="w-3 h-3 mr-1" />
-                              Upgrade
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
+    <div className="bg-zinc-900/95 border border-zinc-700 h-full flex flex-col">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-zinc-800 to-zinc-900 px-4 py-3 border-b border-zinc-700">
+        <div className="flex items-center gap-3">
+          <Hammer className="w-5 h-5 text-amber-500" />
+          <h2 className="text-lg font-bold text-zinc-100 uppercase tracking-wide">Compound Structures</h2>
+        </div>
+        <p className="text-xs text-zinc-500 mt-1">Build and upgrade structures to improve your compound</p>
       </div>
 
-      {/* Build new structures */}
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-4">Build New Structures</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {availableBuildings.map((type) => {
-            const Icon = buildingIcons[type]
-            const cost = buildingCosts[type]
-            const affordable = canAfford(type)
-
+      {/* Building List */}
+      <div className="flex-1 overflow-y-auto p-3">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          {buildings.map((building) => {
+            const needsRepair = building.health < building.maxHealth
+            const canUpgrade = canAffordUpgrade(building) && building.level < building.maxLevel
+            const canRepair = canAffordRepair(building) && needsRepair
+            const upgradeCost = getUpgradeCost(building)
+            const repairCost = getRepairCost(building)
+            const status = getStatusText(building.health, building.maxHealth)
+            const healthPercent = (building.health / building.maxHealth) * 100
+            
             return (
-              <Card 
-                key={type}
+              <div
+                key={building.id}
                 className={cn(
-                  "transition-all",
-                  affordable ? "hover:border-primary/50 cursor-pointer" : "opacity-50"
+                  "bg-zinc-800/80 border rounded-sm overflow-hidden transition-all",
+                  needsRepair ? "border-orange-700/50" : "border-zinc-600 hover:border-zinc-500"
                 )}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-secondary">
-                      <Icon className="w-5 h-5 text-muted-foreground" />
+                {/* Building Header */}
+                <div className="flex items-start gap-3 p-3 bg-zinc-800/50">
+                  <div className={cn(
+                    "w-10 h-10 rounded flex items-center justify-center",
+                    needsRepair ? "bg-orange-900/50 text-orange-400" : "bg-zinc-700 text-zinc-300"
+                  )}>
+                    {BUILDING_ICONS[building.type] || <Package className="w-5 h-5" />}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-zinc-100 text-sm truncate">
+                        {building.name}
+                      </h3>
+                      <span className={cn(
+                        "text-xs font-bold px-2 py-0.5 rounded",
+                        building.level >= building.maxLevel 
+                          ? "bg-amber-600/30 text-amber-400"
+                          : "bg-zinc-700 text-zinc-300"
+                      )}>
+                        LVL {building.level}{building.level >= building.maxLevel && " MAX"}
+                      </span>
                     </div>
+                    
+                    <p className="text-xs text-zinc-400 mt-1 line-clamp-2">
+                      {BUILDING_DESCRIPTIONS[building.type] || "Structure providing bonuses to your compound."}
+                    </p>
+                  </div>
+                </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-foreground capitalize">{type}</h4>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {buildingDescriptions[type]}
-                      </p>
-
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                        <span className={resources.materials >= cost.materials ? "text-foreground" : "text-destructive"}>
-                          🪵 {cost.materials}
-                        </span>
-                        {cost.fuel > 0 && (
-                          <span className={resources.fuel >= cost.fuel ? "text-foreground" : "text-destructive"}>
-                            ⛽ {cost.fuel}
-                          </span>
-                        )}
+                {/* Health Bar */}
+                <div className="px-3 py-2 bg-zinc-900/50 border-t border-zinc-700/50">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-zinc-400">Structural Integrity</span>
+                    <span className={cn("text-xs font-medium", status.color)}>
+                      {status.text}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-zinc-700 rounded-sm overflow-hidden">
+                    <div 
+                      className={cn("h-full transition-all", getHealthBarColor(building.health, building.maxHealth))}
+                      style={{ width: `${healthPercent}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-zinc-500">{building.health} / {building.maxHealth} HP</span>
+                    {building.health <= building.maxHealth * 0.5 && (
+                      <div className="flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-orange-500" />
+                        <span className="text-xs text-orange-400">Needs repair</span>
                       </div>
+                    )}
+                  </div>
+                </div>
 
+                {/* Actions */}
+                <div className="p-3 bg-zinc-900/30 border-t border-zinc-700/50 space-y-2">
+                  {/* Upgrade */}
+                  {building.level < building.maxLevel && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-zinc-400">Upgrade Cost:</span>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className={resources.materials >= upgradeCost.materials ? 'text-zinc-300' : 'text-red-400'}>
+                            {upgradeCost.materials} Materials
+                          </span>
+                          <span className={resources.fuel >= upgradeCost.fuel ? 'text-zinc-300' : 'text-red-400'}>
+                            {upgradeCost.fuel} Fuel
+                          </span>
+                        </div>
+                      </div>
                       <Button
-                        size="sm"
-                        className="w-full"
-                        disabled={!affordable}
-                        onClick={() => buildStructure(type)}
+                        onClick={() => upgradeBuilding(building.id)}
+                        disabled={!canUpgrade}
+                        className={cn(
+                          "w-full h-8 text-xs font-semibold uppercase tracking-wide",
+                          canUpgrade 
+                            ? "bg-amber-600 hover:bg-amber-500 text-white"
+                            : "bg-zinc-700 text-zinc-500"
+                        )}
                       >
-                        Build
+                        <ArrowUp className="w-3 h-3 mr-1" />
+                        Upgrade to Level {building.level + 1}
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  )}
+
+                  {/* Repair */}
+                  {needsRepair && (
+                    <Button
+                      onClick={() => repairBuilding(building.id)}
+                      disabled={!canRepair}
+                      variant="outline"
+                      className={cn(
+                        "w-full h-8 text-xs font-semibold uppercase tracking-wide",
+                        canRepair 
+                          ? "border-orange-600 text-orange-400 hover:bg-orange-600/20"
+                          : "border-zinc-600 text-zinc-500"
+                      )}
+                    >
+                      <Wrench className="w-3 h-3 mr-1" />
+                      Repair ({repairCost} Materials)
+                    </Button>
+                  )}
+
+                  {building.level >= building.maxLevel && !needsRepair && (
+                    <div className="flex items-center justify-center gap-2 py-2 text-amber-400">
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="text-xs font-medium">Fully Upgraded</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* Footer Stats */}
+      <div className="bg-zinc-800 border-t border-zinc-700 px-4 py-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-zinc-400">Total Structures: {buildings.length}</span>
+          <span className="text-zinc-400">Day {day}</span>
         </div>
       </div>
     </div>
