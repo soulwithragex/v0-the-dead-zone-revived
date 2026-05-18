@@ -1,83 +1,83 @@
 'use client'
 
 import { useState } from 'react'
-import { useGameStore, type Survivor, type SurvivorClass } from '@/lib/game-store'
+import { useGameStore, type Superviviente, type ClaseSuperviviete } from '@/lib/game-store'
 import { cn } from '@/lib/utils'
 
-const classInfo: Record<SurvivorClass, { name: string; description: string; color: string; specialization: string }> = {
-  leader: { 
-    name: 'Leader', 
-    description: 'Well-rounded survivor who leads the group',
+const infoClase: Record<ClaseSuperviviete, { nombre: string; descripcion: string; color: string; especializacion: string }> = {
+  lider: { 
+    nombre: 'Líder', 
+    descripcion: 'Superviviente versátil que lidera el grupo',
     color: 'text-yellow-400',
-    specialization: 'Pistol, Rifle, Melee'
+    especializacion: 'Pistola, Rifle, Cuerpo a cuerpo'
   },
-  fighter: { 
-    name: 'Fighter', 
-    description: 'Combat specialist with high damage output',
+  luchador: { 
+    nombre: 'Luchador', 
+    descripcion: 'Especialista en combate con alto daño',
     color: 'text-red-400',
-    specialization: 'Assault, Shotgun, SMG'
+    especializacion: 'Asalto, Escopeta, Subfusil'
   },
-  medic: { 
-    name: 'Medic', 
-    description: 'Can heal other survivors during missions',
+  medico: { 
+    nombre: 'Médico', 
+    descripcion: 'Puede curar a otros supervivientes en misiones',
     color: 'text-green-400',
-    specialization: 'Pistol, SMG'
+    especializacion: 'Pistola, Subfusil'
   },
-  scavenger: { 
-    name: 'Scavenger', 
-    description: 'Finds more and better loot',
+  recolector: { 
+    nombre: 'Recolector', 
+    descripcion: 'Encuentra más y mejor botín',
     color: 'text-purple-400',
-    specialization: 'Pistol, Melee'
+    especializacion: 'Pistola, Cuerpo a cuerpo'
   },
-  engineer: { 
-    name: 'Engineer', 
-    description: 'Faster building and trap disarming',
+  ingeniero: { 
+    nombre: 'Ingeniero', 
+    descripcion: 'Construcción más rápida y desarme de trampas',
     color: 'text-blue-400',
-    specialization: 'Shotgun, Pistol'
+    especializacion: 'Escopeta, Pistola'
   },
-  recon: { 
-    name: 'Recon', 
-    description: 'Fast movement and spot traps easily',
+  explorador: { 
+    nombre: 'Explorador', 
+    descripcion: 'Movimiento rápido y detección de trampas',
     color: 'text-cyan-400',
-    specialization: 'Rifle, Pistol'
+    especializacion: 'Rifle, Pistola'
   },
 }
 
-const statusInfo: Record<string, { label: string; color: string }> = {
-  idle: { label: 'Idle', color: 'bg-green-500' },
-  mission: { label: 'On Mission', color: 'bg-yellow-500' },
-  defending: { label: 'Defending', color: 'bg-blue-500' },
-  building: { label: 'Building', color: 'bg-purple-500' },
-  resting: { label: 'Resting', color: 'bg-indigo-500' },
-  injured: { label: 'Injured', color: 'bg-red-500' },
+const infoEstado: Record<string, { etiqueta: string; color: string }> = {
+  inactivo: { etiqueta: 'Inactivo', color: 'bg-green-500' },
+  mision: { etiqueta: 'En Misión', color: 'bg-yellow-500' },
+  defendiendo: { etiqueta: 'Defendiendo', color: 'bg-blue-500' },
+  construyendo: { etiqueta: 'Construyendo', color: 'bg-purple-500' },
+  descansando: { etiqueta: 'Descansando', color: 'bg-indigo-500' },
+  herido: { etiqueta: 'Herido', color: 'bg-red-500' },
 }
 
-export function SurvivorPanel() {
-  const { survivors, selectedSurvivor, selectSurvivor, weapons, equipWeapon, assignSurvivorClass, healSurvivor, updateSurvivorState } = useGameStore()
-  const [showClassSelect, setShowClassSelect] = useState<string | null>(null)
+export function PanelSupervivientes() {
+  const { supervivientes, supervivienteSeleccionado, seleccionarSuperviviente, armas, equiparArma, asignarClaseSuperviviente, curarSuperviviente, actualizarEstadoSuperviviente } = useGameStore()
+  const [mostrarSeleccionClase, setMostrarSeleccionClase] = useState<string | null>(null)
 
-  const selected = survivors.find(s => s.id === selectedSurvivor)
+  const seleccionado = supervivientes.find(s => s.id === supervivienteSeleccionado)
 
-  const renderSurvivorCard = (survivor: Survivor) => {
-    const classData = classInfo[survivor.class]
-    const status = statusInfo[survivor.status]
-    const healthPercent = (survivor.health / survivor.maxHealth) * 100
+  const renderizarTarjetaSuperviviente = (superviviente: Superviviente) => {
+    const datosClase = infoClase[superviviente.clase]
+    const estado = infoEstado[superviviente.estado]
+    const porcentajeSalud = (superviviente.salud / superviviente.saludMaxima) * 100
 
     return (
       <div
-        key={survivor.id}
-        onClick={() => selectSurvivor(survivor.id)}
+        key={superviviente.id}
+        onClick={() => seleccionarSuperviviente(superviviente.id)}
         className={cn(
           "relative bg-stone-800/80 rounded-lg p-3 cursor-pointer transition-all border-2",
-          selectedSurvivor === survivor.id 
+          supervivienteSeleccionado === superviviente.id 
             ? "border-primary ring-1 ring-primary/50" 
             : "border-transparent hover:border-stone-600"
         )}
       >
-        {/* Status indicator */}
-        <div className={cn("absolute top-2 right-2 w-2.5 h-2.5 rounded-full", status.color)} />
+        {/* Indicador de estado */}
+        <div className={cn("absolute top-2 right-2 w-2.5 h-2.5 rounded-full", estado.color)} />
 
-        {/* Avatar & Basic Info */}
+        {/* Avatar e Info Básica */}
         <div className="flex gap-3">
           {/* Avatar */}
           <div className="relative">
@@ -91,258 +91,268 @@ export function SurvivorPanel() {
               </svg>
             </div>
             <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-stone-900 rounded-full flex items-center justify-center border-2 border-stone-700">
-              <span className="text-xs font-bold text-white">{survivor.level}</span>
+              <span className="text-xs font-bold text-white">{superviviente.nivel}</span>
             </div>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white truncate">{survivor.name}</h3>
+              <h3 className="font-semibold text-white truncate">{superviviente.nombre}</h3>
             </div>
-            <div className={cn("text-xs font-medium", classData.color)}>
-              {classData.name}
+            <div className={cn("text-xs font-medium", datosClase.color)}>
+              {datosClase.nombre}
             </div>
             <div className="text-[10px] text-stone-400 mt-0.5">
-              {status.label}
+              {estado.etiqueta}
             </div>
           </div>
         </div>
 
-        {/* Health bar */}
+        {/* Barra de salud */}
         <div className="mt-3">
           <div className="flex justify-between text-[10px] text-stone-400 mb-1">
-            <span>Health</span>
-            <span>{Math.floor(survivor.health)}/{survivor.maxHealth}</span>
+            <span>Salud</span>
+            <span>{Math.floor(superviviente.salud)}/{superviviente.saludMaxima}</span>
           </div>
           <div className="h-2 bg-stone-900 rounded-full overflow-hidden">
             <div 
               className={cn(
                 "h-full transition-all",
-                healthPercent > 60 ? "bg-green-500" : healthPercent > 30 ? "bg-yellow-500" : "bg-red-500"
+                porcentajeSalud > 60 ? "bg-green-500" : porcentajeSalud > 30 ? "bg-yellow-500" : "bg-red-500"
               )}
-              style={{ width: `${healthPercent}%` }}
+              style={{ width: `${porcentajeSalud}%` }}
             />
           </div>
         </div>
 
-        {/* XP bar */}
+        {/* Barra de XP */}
         <div className="mt-2">
           <div className="flex justify-between text-[10px] text-stone-400 mb-1">
             <span>XP</span>
-            <span>{survivor.xp}/{survivor.xpToNextLevel}</span>
+            <span>{superviviente.xp}/{superviviente.xpSiguienteNivel}</span>
           </div>
           <div className="h-1.5 bg-stone-900 rounded-full overflow-hidden">
             <div 
               className="h-full bg-blue-500 transition-all"
-              style={{ width: `${(survivor.xp / survivor.xpToNextLevel) * 100}%` }}
+              style={{ width: `${(superviviente.xp / superviviente.xpSiguienteNivel) * 100}%` }}
             />
           </div>
         </div>
 
-        {survivor.injured && (
+        {superviviente.herido && (
           <div className="mt-2 flex items-center gap-1.5 text-red-400 text-xs">
             <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 9v4M12 17h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Injured - {Math.ceil(survivor.injuryTimeLeft / 60)}m recovery</span>
+            <span>Herido - {Math.ceil(superviviente.tiempoRestanteHerida / 60)}m recuperación</span>
           </div>
         )}
       </div>
     )
   }
 
-  const renderDetailPanel = (survivor: Survivor) => {
-    const classData = classInfo[survivor.class]
-    const offensiveWeapon = survivor.equipped.offensive.weapon
-    const defensiveWeapon = survivor.equipped.defensive.weapon
+  const renderizarPanelDetalles = (superviviente: Superviviente) => {
+    const datosClase = infoClase[superviviente.clase]
+    const armaOfensiva = superviviente.equipado.ofensivo.arma
+    const armaDefensiva = superviviente.equipado.defensivo.arma
 
     return (
       <div className="bg-stone-800/50 rounded-lg p-4 space-y-4">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-lg font-bold text-white">{survivor.name}</h3>
-            <div className={cn("text-sm", classData.color)}>{classData.name}</div>
-            <div className="text-xs text-stone-400 mt-1">{classData.description}</div>
+            <h3 className="text-lg font-bold text-white">{superviviente.nombre}</h3>
+            <div className={cn("text-sm", datosClase.color)}>{datosClase.nombre}</div>
+            <div className="text-xs text-stone-400 mt-1">{datosClase.descripcion}</div>
           </div>
-          {survivor.class !== 'leader' && (
+          {superviviente.clase !== 'lider' && (
             <button
-              onClick={() => setShowClassSelect(survivor.id)}
+              onClick={() => setMostrarSeleccionClase(superviviente.id)}
               className="text-xs bg-stone-700 hover:bg-stone-600 text-white px-2 py-1 rounded transition-colors"
             >
-              Change Class
+              Cambiar Clase
             </button>
           )}
         </div>
 
-        {showClassSelect === survivor.id && (
+        {mostrarSeleccionClase === superviviente.id && (
           <div className="bg-stone-900 rounded-lg p-3 space-y-2">
-            <div className="text-sm text-stone-400 mb-2">Select Class:</div>
+            <div className="text-sm text-stone-400 mb-2">Seleccionar Clase:</div>
             <div className="grid grid-cols-2 gap-2">
-              {(Object.entries(classInfo) as [SurvivorClass, typeof classInfo[SurvivorClass]][])
-                .filter(([key]) => key !== 'leader')
-                .map(([key, info]) => (
+              {(Object.entries(infoClase) as [ClaseSuperviviete, typeof infoClase[ClaseSuperviviete]][])
+                .filter(([clave]) => clave !== 'lider')
+                .map(([clave, info]) => (
                   <button
-                    key={key}
+                    key={clave}
                     onClick={() => {
-                      assignSurvivorClass(survivor.id, key)
-                      setShowClassSelect(null)
+                      asignarClaseSuperviviente(superviviente.id, clave)
+                      setMostrarSeleccionClase(null)
                     }}
                     className={cn(
                       "p-2 rounded text-left transition-colors",
-                      survivor.class === key 
+                      superviviente.clase === clave 
                         ? "bg-primary/20 border border-primary" 
                         : "bg-stone-800 hover:bg-stone-700"
                     )}
                   >
-                    <div className={cn("font-medium text-sm", info.color)}>{info.name}</div>
-                    <div className="text-[10px] text-stone-400">{info.specialization}</div>
+                    <div className={cn("font-medium text-sm", info.color)}>{info.nombre}</div>
+                    <div className="text-[10px] text-stone-400">{info.especializacion}</div>
                   </button>
                 ))}
             </div>
             <button
-              onClick={() => setShowClassSelect(null)}
+              onClick={() => setMostrarSeleccionClase(null)}
               className="w-full text-xs text-stone-400 hover:text-white py-1"
             >
-              Cancel
+              Cancelar
             </button>
           </div>
         )}
 
-        {/* Morale */}
+        {/* Moral */}
         <div className="bg-stone-900/50 rounded p-2">
           <div className="flex justify-between text-xs text-stone-400 mb-1">
-            <span>Morale</span>
-            <span>{Math.floor(survivor.morale)}%</span>
+            <span>Moral</span>
+            <span>{Math.floor(superviviente.moral)}%</span>
           </div>
           <div className="h-2 bg-stone-800 rounded-full overflow-hidden">
             <div 
               className={cn(
                 "h-full transition-all",
-                survivor.morale > 60 ? "bg-green-500" : survivor.morale > 30 ? "bg-yellow-500" : "bg-red-500"
+                superviviente.moral > 60 ? "bg-green-500" : superviviente.moral > 30 ? "bg-yellow-500" : "bg-red-500"
               )}
-              style={{ width: `${survivor.morale}%` }}
+              style={{ width: `${superviviente.moral}%` }}
             />
           </div>
         </div>
 
-        {/* Skills */}
+        {/* Habilidades */}
         <div>
-          <h4 className="text-sm font-semibold text-stone-300 mb-2">Skills</h4>
+          <h4 className="text-sm font-semibold text-stone-300 mb-2">Habilidades</h4>
           <div className="grid grid-cols-2 gap-2">
-            {Object.entries(survivor.skills).map(([skill, value]) => (
-              <div key={skill} className="bg-stone-900/50 rounded px-2 py-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-stone-400 capitalize">
-                    {skill.replace(/([A-Z])/g, ' $1').trim()}
-                  </span>
-                  <span className={cn(
-                    "text-xs font-bold",
-                    value >= 15 ? "text-green-400" : value >= 10 ? "text-yellow-400" : "text-stone-300"
-                  )}>
-                    {value}
-                  </span>
+            {Object.entries(superviviente.habilidades).map(([habilidad, valor]) => {
+              const nombresHabilidades: Record<string, string> = {
+                combateDistancia: 'Combate Distancia',
+                combateCuerpoACuerpo: 'Cuerpo a Cuerpo',
+                curacion: 'Curación',
+                movimiento: 'Movimiento',
+                recoleccion: 'Recolección',
+                suerte: 'Suerte'
+              }
+              return (
+                <div key={habilidad} className="bg-stone-900/50 rounded px-2 py-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-stone-400">
+                      {nombresHabilidades[habilidad] || habilidad}
+                    </span>
+                    <span className={cn(
+                      "text-xs font-bold",
+                      valor >= 15 ? "text-green-400" : valor >= 10 ? "text-yellow-400" : "text-stone-300"
+                    )}>
+                      {valor}
+                    </span>
+                  </div>
+                  <div className="h-1 bg-stone-800 rounded-full mt-1 overflow-hidden">
+                    <div 
+                      className="h-full bg-primary"
+                      style={{ width: `${Math.min(100, (valor / 20) * 100)}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1 bg-stone-800 rounded-full mt-1 overflow-hidden">
-                  <div 
-                    className="h-full bg-primary"
-                    style={{ width: `${Math.min(100, (value / 20) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
-        {/* Equipment */}
+        {/* Equipamiento */}
         <div>
-          <h4 className="text-sm font-semibold text-stone-300 mb-2">Equipment</h4>
+          <h4 className="text-sm font-semibold text-stone-300 mb-2">Equipamiento</h4>
           
           <div className="bg-stone-900/50 rounded p-2 mb-2">
-            <div className="text-xs text-red-400 mb-1.5 font-medium">Offensive Loadout</div>
+            <div className="text-xs text-red-400 mb-1.5 font-medium">Carga Ofensiva</div>
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-stone-800 rounded flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className={cn("w-6 h-6", offensiveWeapon ? "text-red-400" : "text-stone-600")} fill="none" stroke="currentColor" strokeWidth="1.5">
+                <svg viewBox="0 0 24 24" className={cn("w-6 h-6", armaOfensiva ? "text-red-400" : "text-stone-600")} fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M14.5 4.5L20 10M22 12l-5 5-9-9-4 4-2.5-2.5M9 4L4 9" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                {offensiveWeapon ? (
+                {armaOfensiva ? (
                   <>
                     <div className={cn(
                       "text-sm font-medium truncate",
-                      offensiveWeapon.rarity === 'unique' ? "text-orange-400" :
-                      offensiveWeapon.rarity === 'rare' ? "text-purple-400" :
-                      offensiveWeapon.rarity === 'uncommon' ? "text-blue-400" : "text-stone-300"
+                      armaOfensiva.rareza === 'unico' ? "text-orange-400" :
+                      armaOfensiva.rareza === 'raro' ? "text-purple-400" :
+                      armaOfensiva.rareza === 'poco_comun' ? "text-blue-400" : "text-stone-300"
                     )}>
-                      {offensiveWeapon.name}
+                      {armaOfensiva.nombre}
                     </div>
                     <div className="text-[10px] text-stone-400">
-                      DMG: {offensiveWeapon.damage} | ACC: {offensiveWeapon.accuracy}% | DPS: {offensiveWeapon.dps}
+                      DMG: {armaOfensiva.dano} | PRE: {armaOfensiva.precision}% | DPS: {armaOfensiva.dps}
                     </div>
                   </>
                 ) : (
-                  <span className="text-xs text-stone-500">No weapon equipped</span>
+                  <span className="text-xs text-stone-500">Sin arma equipada</span>
                 )}
               </div>
             </div>
           </div>
 
           <div className="bg-stone-900/50 rounded p-2">
-            <div className="text-xs text-blue-400 mb-1.5 font-medium">Defensive Loadout</div>
+            <div className="text-xs text-blue-400 mb-1.5 font-medium">Carga Defensiva</div>
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-stone-800 rounded flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className={cn("w-6 h-6", defensiveWeapon ? "text-blue-400" : "text-stone-600")} fill="none" stroke="currentColor" strokeWidth="1.5">
+                <svg viewBox="0 0 24 24" className={cn("w-6 h-6", armaDefensiva ? "text-blue-400" : "text-stone-600")} fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                {defensiveWeapon ? (
+                {armaDefensiva ? (
                   <>
-                    <div className="text-sm font-medium text-stone-300 truncate">{defensiveWeapon.name}</div>
+                    <div className="text-sm font-medium text-stone-300 truncate">{armaDefensiva.nombre}</div>
                     <div className="text-[10px] text-stone-400">
-                      DMG: {defensiveWeapon.damage} | ACC: {defensiveWeapon.accuracy}%
+                      DMG: {armaDefensiva.dano} | PRE: {armaDefensiva.precision}%
                     </div>
                   </>
                 ) : (
-                  <span className="text-xs text-stone-500">No weapon equipped</span>
+                  <span className="text-xs text-stone-500">Sin arma equipada</span>
                 )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Available weapons */}
-        {weapons.length > 0 && (
+        {/* Armas disponibles */}
+        {armas.length > 0 && (
           <div>
-            <h4 className="text-sm font-semibold text-stone-300 mb-2">Available Weapons</h4>
+            <h4 className="text-sm font-semibold text-stone-300 mb-2">Armas Disponibles</h4>
             <div className="space-y-1 max-h-32 overflow-y-auto">
-              {weapons.map(weapon => (
+              {armas.map(arma => (
                 <div 
-                  key={weapon.id}
+                  key={arma.id}
                   className="flex items-center justify-between bg-stone-900/50 rounded p-2"
                 >
                   <div>
                     <div className={cn(
                       "text-sm",
-                      weapon.rarity === 'unique' ? "text-orange-400" :
-                      weapon.rarity === 'rare' ? "text-purple-400" :
-                      weapon.rarity === 'uncommon' ? "text-blue-400" : "text-stone-300"
+                      arma.rareza === 'unico' ? "text-orange-400" :
+                      arma.rareza === 'raro' ? "text-purple-400" :
+                      arma.rareza === 'poco_comun' ? "text-blue-400" : "text-stone-300"
                     )}>
-                      {weapon.name}
+                      {arma.nombre}
                     </div>
                     <div className="text-[10px] text-stone-400">
-                      Lv.{weapon.level} | {weapon.type} | DPS: {weapon.dps}
+                      Nv.{arma.nivel} | {arma.tipo} | DPS: {arma.dps}
                     </div>
                   </div>
                   <div className="flex gap-1">
                     <button
-                      onClick={() => equipWeapon(survivor.id, weapon.id, 'offensive')}
+                      onClick={() => equiparArma(superviviente.id, arma.id, 'ofensivo')}
                       className="text-[10px] bg-red-900/50 hover:bg-red-800/50 text-red-300 px-2 py-1 rounded"
                     >
-                      OFF
+                      OFE
                     </button>
                     <button
-                      onClick={() => equipWeapon(survivor.id, weapon.id, 'defensive')}
+                      onClick={() => equiparArma(superviviente.id, arma.id, 'defensivo')}
                       className="text-[10px] bg-blue-900/50 hover:bg-blue-800/50 text-blue-300 px-2 py-1 rounded"
                     >
                       DEF
@@ -354,51 +364,51 @@ export function SurvivorPanel() {
           </div>
         )}
 
-        {/* Actions */}
+        {/* Acciones */}
         <div className="flex gap-2">
           <button
-            onClick={() => healSurvivor(survivor.id)}
-            disabled={survivor.health >= survivor.maxHealth}
+            onClick={() => curarSuperviviente(superviviente.id)}
+            disabled={superviviente.salud >= superviviente.saludMaxima}
             className={cn(
               "flex-1 py-2 rounded text-sm font-medium transition-colors",
-              survivor.health < survivor.maxHealth
+              superviviente.salud < superviviente.saludMaxima
                 ? "bg-green-600 hover:bg-green-500 text-white"
                 : "bg-stone-700 text-stone-500 cursor-not-allowed"
             )}
           >
-            Heal
+            Curar
           </button>
           <button
             onClick={() => {
-              updateSurvivorState(survivor.id, { 
-                status: survivor.status === 'resting' ? 'idle' : 'resting'
+              actualizarEstadoSuperviviente(superviviente.id, { 
+                estado: superviviente.estado === 'descansando' ? 'inactivo' : 'descansando'
               })
             }}
-            disabled={survivor.status === 'mission' || survivor.injured}
+            disabled={superviviente.estado === 'mision' || superviviente.herido}
             className={cn(
               "flex-1 py-2 rounded text-sm font-medium transition-colors",
-              survivor.status !== 'mission' && !survivor.injured
+              superviviente.estado !== 'mision' && !superviviente.herido
                 ? "bg-indigo-600 hover:bg-indigo-500 text-white"
                 : "bg-stone-700 text-stone-500 cursor-not-allowed"
             )}
           >
-            {survivor.status === 'resting' ? 'Stop Rest' : 'Rest'}
+            {superviviente.estado === 'descansando' ? 'Levantar' : 'Descansar'}
           </button>
           <button
             onClick={() => {
-              updateSurvivorState(survivor.id, { 
-                status: survivor.status === 'defending' ? 'idle' : 'defending'
+              actualizarEstadoSuperviviente(superviviente.id, { 
+                estado: superviviente.estado === 'defendiendo' ? 'inactivo' : 'defendiendo'
               })
             }}
-            disabled={survivor.status === 'mission' || survivor.injured}
+            disabled={superviviente.estado === 'mision' || superviviente.herido}
             className={cn(
               "flex-1 py-2 rounded text-sm font-medium transition-colors",
-              survivor.status !== 'mission' && !survivor.injured
+              superviviente.estado !== 'mision' && !superviviente.herido
                 ? "bg-blue-600 hover:bg-blue-500 text-white"
                 : "bg-stone-700 text-stone-500 cursor-not-allowed"
             )}
           >
-            {survivor.status === 'defending' ? 'Stand Down' : 'Defend'}
+            {superviviente.estado === 'defendiendo' ? 'Retirar' : 'Defender'}
           </button>
         </div>
       </div>
@@ -412,22 +422,22 @@ export function SurvivorPanel() {
           <svg viewBox="0 0 24 24" className="w-5 h-5 text-primary" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
           </svg>
-          Survivors ({survivors.length}/10)
+          Supervivientes ({supervivientes.length}/10)
         </h2>
       </div>
 
       <div className="p-4">
         <div className="grid lg:grid-cols-2 gap-4">
           <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
-            {survivors.map(renderSurvivorCard)}
+            {supervivientes.map(renderizarTarjetaSuperviviente)}
           </div>
 
           <div>
-            {selected ? (
-              renderDetailPanel(selected)
+            {seleccionado ? (
+              renderizarPanelDetalles(seleccionado)
             ) : (
               <div className="h-full flex items-center justify-center text-stone-500 text-sm bg-stone-800/30 rounded-lg min-h-[200px]">
-                Select a survivor to view details
+                Selecciona un superviviente para ver detalles
               </div>
             )}
           </div>

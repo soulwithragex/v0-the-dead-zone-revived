@@ -15,60 +15,60 @@ import {
   AlertTriangle
 } from 'lucide-react'
 
-export function CombatPanel() {
+export function PanelCombate() {
   const { 
-    zombieWaves, 
-    survivors, 
-    combatLog, 
-    defendCompound,
-    securityRating,
+    hordasZombies, 
+    supervivientes, 
+    registroCombate, 
+    defenderCompound,
+    nivelSeguridad,
   } = useGameStore()
 
-  const defenders = survivors.filter(s => s.status === 'defending' || s.status === 'idle')
-  const hasAttackingWave = zombieWaves.some(w => w.status === 'attacking')
+  const defensores = supervivientes.filter(s => s.estado === 'defendiendo' || s.estado === 'inactivo')
+  const hayAtaqueEnCurso = hordasZombies.some(h => h.estado === 'atacando')
 
-  // Calculate max security based on buildings
-  const maxSecurityRating = 100
+  // Calcular seguridad máxima basada en edificios
+  const seguridadMaxima = 100
 
   return (
     <div className="space-y-4">
-      {/* Zombie Waves */}
-      {zombieWaves.length > 0 && (
+      {/* Hordas Zombie */}
+      {hordasZombies.length > 0 && (
         <Card className={cn(
           "border-2",
-          hasAttackingWave ? "border-destructive animate-pulse" : "border-yellow-600"
+          hayAtaqueEnCurso ? "border-destructive animate-pulse" : "border-yellow-600"
         )}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2 text-destructive">
               <Skull className="w-4 h-4" />
-              {hasAttackingWave ? 'ZOMBIES ATTACKING!' : 'Zombie Horde Approaching'}
+              {hayAtaqueEnCurso ? '¡ZOMBIES ATACANDO!' : 'Horda Zombie Acercándose'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {zombieWaves.map((wave) => (
-              <div key={wave.id} className="space-y-2">
+            {hordasZombies.map((horda) => (
+              <div key={horda.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl zombie-animate">&#129503;</span>
                     <div>
                       <div className="font-medium text-foreground">
-                        {wave.count} Zombies
+                        {horda.cantidad} Zombies
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        HP: {wave.health} | DMG: {wave.damage}
+                        PV: {horda.salud} | DMG: {horda.dano}
                       </div>
                     </div>
                   </div>
-                  {wave.status === 'approaching' && (
+                  {horda.estado === 'acercandose' && (
                     <Badge variant="outline" className="text-yellow-500 border-yellow-500">
                       <Clock className="w-3 h-3 mr-1" />
-                      {wave.timeUntilAttack}s
+                      {horda.tiempoHastaAtaque}s
                     </Badge>
                   )}
-                  {wave.status === 'attacking' && (
+                  {horda.estado === 'atacando' && (
                     <Badge className="bg-destructive text-destructive-foreground">
                       <Swords className="w-3 h-3 mr-1" />
-                      ATTACKING
+                      ATACANDO
                     </Badge>
                   )}
                 </div>
@@ -78,50 +78,50 @@ export function CombatPanel() {
             <Button 
               className="w-full gap-2"
               variant="destructive"
-              onClick={defendCompound}
+              onClick={defenderCompound}
             >
               <Shield className="w-4 h-4" />
-              Rally Defenders ({defenders.length})
+              Reunir Defensores ({defensores.length})
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Defense Status */}
+      {/* Estado de Defensa */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Shield className="w-4 h-4 text-primary" />
-            Base Defense
+            Defensa de la Base
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
             <div className="flex items-center justify-between text-sm mb-1">
-              <span className="text-muted-foreground">Defense Strength</span>
+              <span className="text-muted-foreground">Fuerza Defensiva</span>
               <span className={cn(
                 "font-mono",
-                securityRating < 30 ? "text-destructive" : "text-foreground"
+                nivelSeguridad < 30 ? "text-destructive" : "text-foreground"
               )}>
-                {Math.floor(securityRating)}/{maxSecurityRating}
+                {Math.floor(nivelSeguridad)}/{seguridadMaxima}
               </span>
             </div>
             <Progress 
-              value={(securityRating / maxSecurityRating) * 100}
+              value={(nivelSeguridad / seguridadMaxima) * 100}
               className={cn(
                 "h-2",
-                securityRating < 30 && "[&>div]:bg-destructive"
+                nivelSeguridad < 30 && "[&>div]:bg-destructive"
               )}
             />
           </div>
 
           <div>
-            <div className="text-sm text-muted-foreground mb-2">Active Defenders</div>
-            {defenders.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No survivors defending</p>
+            <div className="text-sm text-muted-foreground mb-2">Defensores Activos</div>
+            {defensores.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Ningún superviviente defendiendo</p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {defenders.slice(0, 6).map((s) => (
+                {defensores.slice(0, 6).map((s) => (
                   <div 
                     key={s.id}
                     className="flex items-center gap-1 bg-secondary/50 rounded px-2 py-1"
@@ -130,17 +130,17 @@ export function CombatPanel() {
                       <ellipse cx="10" cy="6" rx="5" ry="5" fill="#d4a574" />
                       <rect x="4" y="11" width="12" height="10" rx="2" fill="#4a6741" />
                     </svg>
-                    <span className="text-xs">{s.name.split(' ')[0]}</span>
-                    {s.equipped.offensive.weapon && (
+                    <span className="text-xs">{s.nombre.split(' ')[0]}</span>
+                    {s.equipado.ofensivo.arma && (
                       <span className="text-xs text-muted-foreground">
-                        ({s.equipped.offensive.weapon.damage})
+                        ({s.equipado.ofensivo.arma.dano})
                       </span>
                     )}
                   </div>
                 ))}
-                {defenders.length > 6 && (
+                {defensores.length > 6 && (
                   <span className="text-xs text-muted-foreground self-center">
-                    +{defenders.length - 6} more
+                    +{defensores.length - 6} más
                   </span>
                 )}
               </div>
@@ -149,37 +149,37 @@ export function CombatPanel() {
         </CardContent>
       </Card>
 
-      {/* Combat Log */}
+      {/* Registro de Combate */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Swords className="w-4 h-4 text-muted-foreground" />
-            Combat Log
+            Registro de Combate
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[200px]">
-            {combatLog.length === 0 ? (
+            {registroCombate.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
-                No combat activity yet
+                Sin actividad de combate aún
               </p>
             ) : (
               <div className="space-y-1">
-                {combatLog.slice(0, 20).map((log) => (
+                {registroCombate.slice(0, 20).map((registro) => (
                   <div 
-                    key={log.id}
+                    key={registro.id}
                     className={cn(
                       "text-xs py-1 border-b border-border/50 last:border-0",
-                      log.type === 'kill' && "text-green-400",
-                      log.type === 'damage' && "text-red-400",
-                      log.type === 'heal' && "text-blue-400",
-                      log.type === 'event' && "text-muted-foreground"
+                      registro.tipo === 'eliminacion' && "text-green-400",
+                      registro.tipo === 'dano' && "text-red-400",
+                      registro.tipo === 'curacion' && "text-blue-400",
+                      registro.tipo === 'evento' && "text-muted-foreground"
                     )}
                   >
                     <span className="text-muted-foreground/50 font-mono mr-2">
-                      {new Date(log.timestamp).toLocaleTimeString()}
+                      {new Date(registro.timestamp).toLocaleTimeString()}
                     </span>
-                    {log.message}
+                    {registro.mensaje}
                   </div>
                 ))}
               </div>
@@ -188,19 +188,19 @@ export function CombatPanel() {
         </CardContent>
       </Card>
 
-      {/* Tips */}
-      {!hasAttackingWave && zombieWaves.length === 0 && (
+      {/* Consejos */}
+      {!hayAtaqueEnCurso && hordasZombies.length === 0 && (
         <Card className="bg-secondary/30">
           <CardContent className="p-4">
             <div className="flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
               <div className="text-xs text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">Survival Tips</p>
+                <p className="font-medium text-foreground mb-1">Consejos de Supervivencia</p>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>Build barricades to increase base defense</li>
-                  <li>Equip weapons to your survivors</li>
-                  <li>Zombie attacks are more frequent at night</li>
-                  <li>Keep resources stocked for emergencies</li>
+                  <li>Construye barricadas para aumentar la defensa</li>
+                  <li>Equipa armas a tus supervivientes</li>
+                  <li>Los ataques zombie son más frecuentes de noche</li>
+                  <li>Mantén recursos almacenados para emergencias</li>
                 </ul>
               </div>
             </div>

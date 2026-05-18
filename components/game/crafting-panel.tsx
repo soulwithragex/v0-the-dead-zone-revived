@@ -1,134 +1,150 @@
 'use client'
 
-import { useGameStore, type WeaponType } from '@/lib/game-store'
+import { useGameStore, type TipoArma } from '@/lib/game-store'
 import { cn } from '@/lib/utils'
 import { Hammer, Trash2, UserPlus, Wrench, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-const weaponCrafts: { type: WeaponType; name: string; description: string; cost: Record<string, number> }[] = [
-  { type: 'melee', name: 'Melee Weapon', description: 'Close combat, no ammo needed', cost: { metal: 15, wood: 10 } },
-  { type: 'pistol', name: 'Pistol', description: 'Balanced sidearm', cost: { metal: 30, ammo: 10 } },
-  { type: 'rifle', name: 'Rifle', description: 'High accuracy, long range', cost: { metal: 50, wood: 20, ammo: 15 } },
-  { type: 'shotgun', name: 'Shotgun', description: 'High damage, close range', cost: { metal: 45, wood: 15, ammo: 20 } },
-  { type: 'smg', name: 'SMG', description: 'Fast fire rate', cost: { metal: 40, ammo: 25 } },
-  { type: 'assault', name: 'Assault Rifle', description: 'Versatile combat weapon', cost: { metal: 60, ammo: 30 } },
+const fabricacionesArmas: { tipo: TipoArma; nombre: string; descripcion: string; costo: Record<string, number> }[] = [
+  { tipo: 'cuerpo_a_cuerpo', nombre: 'Arma Cuerpo a Cuerpo', descripcion: 'Combate cercano, sin munición', costo: { metal: 15, madera: 10 } },
+  { tipo: 'pistola', nombre: 'Pistola', descripcion: 'Arma secundaria equilibrada', costo: { metal: 30, municion: 10 } },
+  { tipo: 'rifle', nombre: 'Rifle', descripcion: 'Alta precisión, largo alcance', costo: { metal: 50, madera: 20, municion: 15 } },
+  { tipo: 'escopeta', nombre: 'Escopeta', descripcion: 'Alto daño, corto alcance', costo: { metal: 45, madera: 15, municion: 20 } },
+  { tipo: 'subfusil', nombre: 'Subfusil', descripcion: 'Alta cadencia de fuego', costo: { metal: 40, municion: 25 } },
+  { tipo: 'asalto', nombre: 'Fusil de Asalto', descripcion: 'Arma de combate versátil', costo: { metal: 60, municion: 30 } },
 ]
 
-const rarityColors = {
-  common: 'text-stone-300 border-stone-500',
-  uncommon: 'text-blue-400 border-blue-500',
-  rare: 'text-purple-400 border-purple-500',
-  unique: 'text-orange-400 border-orange-500',
+const coloresRareza = {
+  comun: 'text-stone-300 border-stone-500',
+  poco_comun: 'text-blue-400 border-blue-500',
+  raro: 'text-purple-400 border-purple-500',
+  unico: 'text-orange-400 border-orange-500',
 }
 
-export function CraftingPanel() {
+const nombresRareza: Record<string, string> = {
+  comun: 'Común',
+  poco_comun: 'Poco Común',
+  raro: 'Raro',
+  unico: 'Único',
+}
+
+const nombresTipoArma: Record<string, string> = {
+  cuerpo_a_cuerpo: 'Cuerpo a cuerpo',
+  pistola: 'Pistola',
+  rifle: 'Rifle',
+  escopeta: 'Escopeta',
+  subfusil: 'Subfusil',
+  asalto: 'Asalto',
+}
+
+export function PanelTaller() {
   const { 
-    resources, 
-    weapons, 
-    survivors,
-    craftWeapon, 
-    recruitSurvivor, 
-    scrapWeapon 
+    recursos, 
+    armas, 
+    supervivientes,
+    fabricarArma, 
+    reclutarSuperviviente, 
+    desguazarArma 
   } = useGameStore()
 
-  const canAfford = (cost: Record<string, number>) => {
-    return Object.entries(cost).every(
-      ([res, amount]) => resources[res as keyof typeof resources] >= amount
+  const puedePermitir = (costo: Record<string, number>) => {
+    return Object.entries(costo).every(
+      ([res, cantidad]) => recursos[res as keyof typeof recursos] >= cantidad
     )
   }
 
-  const getScrapValue = (rarity: string, level: number) => {
-    const values: Record<string, number> = { common: 5, uncommon: 10, rare: 20, unique: 40 }
-    return (values[rarity] || 5) * level
+  const obtenerValorDesguace = (rareza: string, nivel: number) => {
+    const valores: Record<string, number> = { comun: 5, poco_comun: 10, raro: 20, unico: 40 }
+    return (valores[rareza] || 5) * nivel
   }
 
-  const isWeaponEquipped = (weaponId: string) => {
-    return survivors.some(s => 
-      s.equipped.offensive.weapon?.id === weaponId ||
-      s.equipped.defensive.weapon?.id === weaponId
+  const estaArmaEquipada = (armaId: string) => {
+    return supervivientes.some(s => 
+      s.equipado.ofensivo.arma?.id === armaId ||
+      s.equipado.defensivo.arma?.id === armaId
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Recruitment Section */}
+      {/* Sección de Reclutamiento */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="bg-secondary/50 px-4 py-3 border-b border-border">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-green-400" />
-            Recruit Survivor
+            Reclutar Superviviente
           </h3>
         </div>
         <div className="p-4">
           <p className="text-sm text-muted-foreground mb-3">
-            Recruit a new survivor to join your group. Current: {survivors.length}/10
+            Recluta un nuevo superviviente para tu grupo. Actual: {supervivientes.length}/10
           </p>
           <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-3 mb-3">
             <div className="text-sm">
-              <span className="text-muted-foreground">Cost: </span>
-              <span className={cn(resources.food >= 50 ? 'text-foreground' : 'text-red-400')}>50 Food</span>
+              <span className="text-muted-foreground">Costo: </span>
+              <span className={cn(recursos.comida >= 50 ? 'text-foreground' : 'text-red-400')}>50 Comida</span>
               <span className="text-muted-foreground"> + </span>
-              <span className={cn(resources.water >= 50 ? 'text-foreground' : 'text-red-400')}>50 Water</span>
+              <span className={cn(recursos.agua >= 50 ? 'text-foreground' : 'text-red-400')}>50 Agua</span>
             </div>
           </div>
           <Button
-            onClick={recruitSurvivor}
-            disabled={survivors.length >= 10 || resources.food < 50 || resources.water < 50}
+            onClick={reclutarSuperviviente}
+            disabled={supervivientes.length >= 10 || recursos.comida < 50 || recursos.agua < 50}
             className="w-full"
           >
             <UserPlus className="w-4 h-4 mr-2" />
-            {survivors.length >= 10 ? 'Compound Full' : 'Recruit Survivor'}
+            {supervivientes.length >= 10 ? 'Compound Lleno' : 'Reclutar Superviviente'}
           </Button>
         </div>
       </div>
 
-      {/* Crafting Section */}
+      {/* Sección de Fabricación */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="bg-secondary/50 px-4 py-3 border-b border-border">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
             <Hammer className="w-4 h-4 text-amber-400" />
-            Weapon Crafting
+            Fabricación de Armas
           </h3>
         </div>
         <div className="p-4">
           <p className="text-sm text-muted-foreground mb-4">
-            Craft weapons using your resources. Quality depends on your compound level.
+            Fabrica armas usando tus recursos. La calidad depende del nivel de tu compound.
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {weaponCrafts.map((craft) => {
-              const affordable = canAfford(craft.cost)
+            {fabricacionesArmas.map((fab) => {
+              const asequible = puedePermitir(fab.costo)
               
               return (
                 <button
-                  key={craft.type}
-                  onClick={() => craftWeapon(craft.type)}
-                  disabled={!affordable}
+                  key={fab.tipo}
+                  onClick={() => fabricarArma(fab.tipo)}
+                  disabled={!asequible}
                   className={cn(
                     "text-left p-3 rounded-lg border transition-all",
-                    affordable 
+                    asequible 
                       ? "bg-secondary/30 border-border hover:border-primary cursor-pointer"
                       : "bg-secondary/10 border-border/50 opacity-60 cursor-not-allowed"
                   )}
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="font-medium text-sm text-foreground">{craft.name}</div>
-                      <div className="text-xs text-muted-foreground">{craft.description}</div>
+                      <div className="font-medium text-sm text-foreground">{fab.nombre}</div>
+                      <div className="text-xs text-muted-foreground">{fab.descripcion}</div>
                     </div>
-                    <Wrench className={cn("w-4 h-4", affordable ? "text-amber-400" : "text-muted")} />
+                    <Wrench className={cn("w-4 h-4", asequible ? "text-amber-400" : "text-muted")} />
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {Object.entries(craft.cost).map(([res, amount]) => (
+                    {Object.entries(fab.costo).map(([res, cantidad]) => (
                       <span 
                         key={res} 
                         className={cn(
                           "text-[10px] px-1.5 py-0.5 rounded",
-                          resources[res as keyof typeof resources] >= amount
+                          recursos[res as keyof typeof recursos] >= cantidad
                             ? "bg-secondary text-foreground"
                             : "bg-red-900/30 text-red-400"
                         )}
                       >
-                        {amount} {res}
+                        {cantidad} {res}
                       </span>
                     ))}
                   </div>
@@ -139,55 +155,55 @@ export function CraftingPanel() {
         </div>
       </div>
 
-      {/* Scrap Weapons Section */}
+      {/* Sección de Desguace de Armas */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="bg-secondary/50 px-4 py-3 border-b border-border">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-zinc-400" />
-            Scrap Weapons
+            Desguazar Armas
           </h3>
         </div>
         <div className="p-4">
           <p className="text-sm text-muted-foreground mb-3">
-            Scrap unneeded weapons for metal. Better weapons give more metal.
+            Desguaza armas innecesarias por metal. Mejores armas dan más metal.
           </p>
-          {weapons.length === 0 ? (
+          {armas.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground text-sm">
-              No weapons available to scrap
+              No hay armas disponibles para desguazar
             </div>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-              {weapons.map((weapon) => {
-                const equipped = isWeaponEquipped(weapon.id)
-                const scrapValue = getScrapValue(weapon.rarity, weapon.level)
+              {armas.map((arma) => {
+                const equipada = estaArmaEquipada(arma.id)
+                const valorDesguace = obtenerValorDesguace(arma.rareza, arma.nivel)
                 
                 return (
                   <div
-                    key={weapon.id}
+                    key={arma.id}
                     className={cn(
                       "flex items-center justify-between bg-secondary/30 rounded-lg p-3 border-l-2",
-                      rarityColors[weapon.rarity]
+                      coloresRareza[arma.rareza]
                     )}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className={cn("font-medium text-sm truncate", rarityColors[weapon.rarity].split(' ')[0])}>
-                        {weapon.name}
+                      <div className={cn("font-medium text-sm truncate", coloresRareza[arma.rareza].split(' ')[0])}>
+                        {arma.nombre}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {weapon.type} | Lv.{weapon.level} | DPS: {weapon.dps}
-                        {equipped && <span className="ml-2 text-yellow-500">(Equipped)</span>}
+                        {nombresTipoArma[arma.tipo] || arma.tipo} | Nv.{arma.nivel} | DPS: {arma.dps}
+                        {equipada && <span className="ml-2 text-yellow-500">(Equipada)</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-zinc-400">+{scrapValue} metal</span>
+                      <span className="text-xs text-zinc-400">+{valorDesguace} metal</span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => scrapWeapon(weapon.id)}
-                        disabled={equipped}
+                        onClick={() => desguazarArma(arma.id)}
+                        disabled={equipada}
                         className={cn(
                           "h-8 w-8 p-0",
-                          equipped ? "opacity-50" : "hover:bg-red-900/30 hover:text-red-400"
+                          equipada ? "opacity-50" : "hover:bg-red-900/30 hover:text-red-400"
                         )}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -201,14 +217,14 @@ export function CraftingPanel() {
         </div>
       </div>
 
-      {/* Tips */}
+      {/* Consejos */}
       <div className="bg-secondary/30 rounded-lg p-4 border border-border">
-        <h3 className="text-sm font-semibold text-foreground mb-2">Workshop Tips</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-2">Consejos del Taller</h3>
         <ul className="text-xs text-muted-foreground space-y-1">
-          <li>- Crafted weapons quality scales with compound level</li>
-          <li>- Rare and unique weapons give more metal when scrapped</li>
-          <li>- Recruited survivors start at level 1 with random skills</li>
-          <li>- Higher compound level unlocks better crafting results</li>
+          <li>- La calidad de las armas fabricadas escala con el nivel del compound</li>
+          <li>- Las armas raras y únicas dan más metal al desguazarlas</li>
+          <li>- Los supervivientes reclutados comienzan en nivel 1 con habilidades aleatorias</li>
+          <li>- Un nivel de compound más alto desbloquea mejores resultados de fabricación</li>
         </ul>
       </div>
     </div>
