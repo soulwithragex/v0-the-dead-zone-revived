@@ -2,9 +2,6 @@
 
 This is a [Next.js](https://nextjs.org)
 
-## Built with v0
-
-
 First, run the development server:
 
 ```bash
