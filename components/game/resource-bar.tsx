@@ -110,39 +110,15 @@ function FuelIcon() {
 }
 
 export function ResourceBar() {
-  const { resources, maxResources, day, hour, isNight, securityRating, comfortRating, survivors, gamePaused, pauseGame, resumeGame } = useGameStore()
-
-  const formatTime = (h: number) => {
-    const hours = Math.floor(h)
-    const mins = Math.floor((h % 1) * 60)
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
-  }
+  const { resources, maxResources, securityRating, comfortRating, survivors } = useGameStore()
 
   const aliveSurvivors = survivors.filter(s => s.health > 0)
 
   return (
-    <div className="bg-gradient-to-b from-stone-900 to-stone-950 border-b-2 border-stone-800 p-3">
+    <div className="space-y-3">
       {/* Top info bar */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {/* Day/Time */}
-          <div className="flex items-center gap-2 bg-black/40 rounded px-3 py-1.5">
-            {isNight ? (
-              <svg viewBox="0 0 24 24" className="w-4 h-4 text-blue-400" fill="currentColor">
-                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" className="w-4 h-4 text-yellow-400" fill="currentColor">
-                <circle cx="12" cy="12" r="5" />
-                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" fill="none" />
-              </svg>
-            )}
-            <div className="text-sm">
-              <span className="text-white font-bold">Day {day}</span>
-              <span className="text-white/60 ml-2">{formatTime(hour)}</span>
-            </div>
-          </div>
-
           {/* Survivors count */}
           <div className="flex items-center gap-2 bg-black/40 rounded px-3 py-1.5">
             <svg viewBox="0 0 24 24" className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" strokeWidth="2">
@@ -178,28 +154,6 @@ export function ResourceBar() {
               <span className="text-white/60 text-xs ml-1">CMF</span>
             </span>
           </div>
-
-          {/* Pause/Play button */}
-          <button
-            onClick={() => gamePaused ? resumeGame() : pauseGame()}
-            className={cn(
-              "w-8 h-8 flex items-center justify-center rounded transition-colors",
-              gamePaused 
-                ? "bg-green-600 hover:bg-green-500 text-white" 
-                : "bg-yellow-600 hover:bg-yellow-500 text-white"
-            )}
-          >
-            {gamePaused ? (
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" />
-                <rect x="14" y="4" width="4" height="16" />
-              </svg>
-            )}
-          </button>
         </div>
       </div>
 

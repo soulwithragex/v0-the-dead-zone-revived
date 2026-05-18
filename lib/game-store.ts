@@ -125,7 +125,7 @@ export interface GameState {
   
   // Compound stats
   day: number
-  hour: number
+  time: number
   isNight: boolean
   securityRating: number
   comfortRating: number
@@ -139,7 +139,7 @@ export interface GameState {
   buildings: Building[]
   availableMissions: Mission[]
   activeMissions: Mission[]
-  hordes: ZombieHorde[]
+  zombieWaves: ZombieHorde[]
   
   // Junk piles (removable debris)
   junkPiles: { id: string; position: { x: number; y: number }; timeToRemove: number }[]
@@ -151,7 +151,7 @@ export interface GameState {
   gameOverReason: string
   
   // UI state
-  selectedTab: 'compound' | 'survivors' | 'inventory' | 'missions' | 'buildings' | 'crafting'
+  selectedTab: 'compound' | 'base' | 'survivors' | 'inventory' | 'missions'
   selectedSurvivor: string | null
   selectedBuilding: string | null
   notifications: { id: string; message: string; type: 'info' | 'warning' | 'danger' | 'success'; timestamp: number }[]
@@ -183,6 +183,7 @@ export interface GameState {
   equipWeapon: (survivorId: string, weaponId: string, loadout: 'offensive' | 'defensive') => void
   healSurvivor: (survivorId: string) => void
   moveSurvivor: (survivorId: string, position: { x: number; y: number }) => void
+  updateSurvivorState: (id: string, updates: Partial<Survivor>) => void
   
   // Mission actions
   assignToMission: (survivorId: string, missionId: string) => void
@@ -193,6 +194,7 @@ export interface GameState {
   // Building actions
   constructBuilding: (type: string, position: { x: number; y: number }) => void
   upgradeBuilding: (id: string) => void
+  repairBuilding: (id: string) => void
   assignToBuilding: (survivorId: string, buildingId: string) => void
   
   // Combat
@@ -203,6 +205,11 @@ export interface GameState {
   addNotification: (message: string, type: 'info' | 'warning' | 'danger' | 'success') => void
   clearNotification: (id: string) => void
   addCombatLog: (message: string, type: 'kill' | 'damage' | 'heal' | 'event') => void
+  
+  // Crafting & Recruitment
+  craftWeapon: (weaponType: WeaponType) => void
+  recruitSurvivor: () => void
+  scrapWeapon: (weaponId: string) => void
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 11)
@@ -215,16 +222,6 @@ const classSkillBonuses: Record<SurvivorClass, Partial<Skills>> = {
   scavenger: { scavenging: 3, luck: 3, movement: 2, rangedCombat: 0, meleeCombat: 0, healing: 0 },
   engineer: { scavenging: 2, rangedCombat: 1, meleeCombat: 1, movement: 1, healing: 0, luck: 1 },
   recon: { movement: 3, rangedCombat: 2, scavenging: 1, meleeCombat: 1, healing: 0, luck: 1 },
-}
-
-// Weapon specializations by class
-const classWeaponSpecializations: Record<SurvivorClass, WeaponType[]> = {
-  leader: ['pistol', 'rifle', 'melee'],
-  fighter: ['assault', 'shotgun', 'smg'],
-  medic: ['pistol', 'smg'],
-  scavenger: ['pistol', 'melee'],
-  engineer: ['shotgun', 'pistol'],
-  recon: ['rifle', 'pistol'],
 }
 
 const survivorNames = [
@@ -413,7 +410,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   maxResources: { ...initialMaxResources },
   
   day: 1,
-  hour: 8,
+  time: 8,
   isNight: false,
   securityRating: 10,
   comfortRating: 5,
@@ -426,7 +423,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   buildings: [...initialBuildings],
   availableMissions: [],
   activeMissions: [],
-  hordes: [],
+  zombieWaves: [],
   junkPiles: [
     { id: generateId(), position: { x: 200, y: 200 }, timeToRemove: 120 },
     { id: generateId(), position: { x: 550, y: 180 }, timeToRemove: 90 },
@@ -512,16 +509,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     get().updatePlayerPosition()
 
     // Time progression
-    let newHour = state.hour + 0.1
+    let newTime = state.time + 0.1
     let newDay = state.day
     
-    if (newHour >= 24) {
-      newHour = 0
+    if (newTime >= 24) {
+      newTime = 0
       newDay += 1
       get().generateMissions()
     }
     
-    const isNight = newHour >= 20 || newHour < 6
+    const isNight = newTime >= 20 || newTime < 6
 
     // Resource consumption (per game tick, scaled)
     const survivorCount = state.survivors.filter(s => !s.injured).length
@@ -650,7 +647,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }).filter(m => m.status !== 'completed' && m.status !== 'failed')
 
     // Zombie horde spawning at night
-    if (isNight && Math.random() < 0.01 && state.hordes.length === 0) {
+    if (isNight && Math.random() < 0.01 && state.zombieWaves.length === 0) {
       const hordeSize = Math.floor(10 + state.day * 3 + Math.random() * 10)
       const angle = Math.random() * Math.PI * 2
       const horde: ZombieHorde = {
@@ -665,20 +662,20 @@ export const useGameStore = create<GameState>((set, get) => ({
           y: 300 + Math.sin(angle) * 280,
         },
       }
-      set(s => ({ hordes: [...s.hordes, horde] }))
+      set(s => ({ zombieWaves: [...s.zombieWaves, horde] }))
       get().addNotification(`ALERT: Zombie horde detected! ${hordeSize} infected approaching!`, 'danger')
       get().addCombatLog(`Horde of ${hordeSize} zombies approaching from the ${angle < Math.PI ? 'south' : 'north'}`, 'event')
     }
 
     // Process hordes
-    const newHordes = state.hordes.map(horde => {
+    const newHordes = state.zombieWaves.map(horde => {
       if (horde.status === 'approaching') {
-        const newTime = horde.timeUntilAttack - 1
-        if (newTime <= 0) {
+        const newTimeUntil = horde.timeUntilAttack - 1
+        if (newTimeUntil <= 0) {
           get().addCombatLog('Zombies breaching the perimeter!', 'event')
           return { ...horde, timeUntilAttack: 0, status: 'attacking' as const }
         }
-        return { ...horde, timeUntilAttack: newTime }
+        return { ...horde, timeUntilAttack: newTimeUntil }
       }
       return horde
     })
@@ -740,13 +737,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     set({
-      hour: newHour,
+      time: newTime,
       day: newDay,
       isNight,
       resources: newResources,
       survivors: newSurvivors,
       activeMissions: newActiveMissions,
-      hordes: newHordes.filter(h => h.status !== 'defeated'),
+      zombieWaves: newHordes.filter(h => h.status !== 'defeated'),
       securityRating: newSecurityRating,
     })
   },
@@ -1015,6 +1012,30 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     get().addNotification(`${building.name} upgraded to level ${building.level + 1}!`, 'success')
   },
+
+  repairBuilding: (id) => {
+    const state = get()
+    const building = state.buildings.find(b => b.id === id)
+    
+    if (!building || building.health >= building.maxHealth) return
+    
+    const repairCost = Math.ceil((building.maxHealth - building.health) * 0.3)
+    
+    if (!state.consumeResources({ metal: repairCost })) {
+      get().addNotification('Not enough metal to repair.', 'warning')
+      return
+    }
+    
+    set({
+      buildings: state.buildings.map(b =>
+        b.id === id
+          ? { ...b, health: b.maxHealth }
+          : b
+      )
+    })
+    
+    get().addNotification(`${building.name} repaired!`, 'success')
+  },
   
   assignToBuilding: (survivorId, buildingId) => {
     const state = get()
@@ -1036,12 +1057,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get()
     const idleSurvivors = state.survivors.filter(s => s.status === 'idle' && !s.injured)
     
-    idleSurvivors.forEach(s => {
-      set({
-        survivors: state.survivors.map(surv =>
-          surv.id === s.id ? { ...surv, status: 'defending' } : surv
-        )
-      })
+    set({
+      survivors: state.survivors.map(s =>
+        idleSurvivors.some(idle => idle.id === s.id)
+          ? { ...s, status: 'defending' }
+          : s
+      )
     })
     
     get().addNotification(`${idleSurvivors.length} survivors assigned to defense.`, 'info')
@@ -1066,5 +1087,102 @@ export const useGameStore = create<GameState>((set, get) => ({
   addCombatLog: (message, type) => {
     const log = { id: generateId(), message, timestamp: Date.now(), type }
     set(state => ({ combatLog: [log, ...state.combatLog].slice(0, 50) }))
+  },
+
+  craftWeapon: (weaponType) => {
+    const state = get()
+    
+    const craftCosts: Record<WeaponType, Partial<Record<ResourceType, number>>> = {
+      melee: { metal: 15, wood: 10 },
+      pistol: { metal: 30, ammo: 10 },
+      rifle: { metal: 50, wood: 20, ammo: 15 },
+      shotgun: { metal: 45, wood: 15, ammo: 20 },
+      smg: { metal: 40, ammo: 25 },
+      assault: { metal: 60, ammo: 30 },
+    }
+    
+    const cost = craftCosts[weaponType]
+    if (!cost || !state.consumeResources(cost)) {
+      get().addNotification('Not enough resources to craft this weapon.', 'warning')
+      return
+    }
+    
+    const newWeapon = createWeapon(state.compoundLevel)
+    newWeapon.type = weaponType
+    
+    // Adjust name based on type
+    const weaponNames: Record<WeaponType, string[]> = {
+      melee: ['Crafted Machete', 'Makeshift Axe', 'Reinforced Bat'],
+      pistol: ['Crafted Pistol', 'Modified 9mm', 'Survivor Handgun'],
+      rifle: ['Crafted Rifle', 'Modified Hunting Rifle', 'Survivor Rifle'],
+      shotgun: ['Crafted Shotgun', 'Modified Pump', 'Survivor Shotgun'],
+      smg: ['Crafted SMG', 'Modified UZI', 'Survivor SMG'],
+      assault: ['Crafted AR', 'Modified M4', 'Survivor Assault'],
+    }
+    newWeapon.name = weaponNames[weaponType][Math.floor(Math.random() * weaponNames[weaponType].length)]
+    
+    set({ weapons: [...state.weapons, newWeapon] })
+    get().addNotification(`Crafted ${newWeapon.name}!`, 'success')
+  },
+
+  recruitSurvivor: () => {
+    const state = get()
+    
+    if (state.survivors.length >= 10) {
+      get().addNotification('Compound is at maximum capacity (10 survivors).', 'warning')
+      return
+    }
+    
+    const recruitCost = { food: 50, water: 50 }
+    if (!state.consumeResources(recruitCost)) {
+      get().addNotification('Not enough food and water to recruit a survivor.', 'warning')
+      return
+    }
+    
+    // Get a name that's not already used
+    const usedNames = state.survivors.map(s => s.name)
+    const availableNames = survivorNames.filter(n => !usedNames.includes(n))
+    const name = availableNames.length > 0 
+      ? availableNames[Math.floor(Math.random() * availableNames.length)]
+      : `Survivor ${state.survivors.length + 1}`
+    
+    const newSurvivor = createSurvivor(name)
+    
+    set({ survivors: [...state.survivors, newSurvivor] })
+    get().addNotification(`${name} has joined your group!`, 'success')
+  },
+
+  scrapWeapon: (weaponId) => {
+    const state = get()
+    const weapon = state.weapons.find(w => w.id === weaponId)
+    
+    if (!weapon) return
+    
+    // Check if weapon is equipped
+    const isEquipped = state.survivors.some(s => 
+      s.equipped.offensive.weapon?.id === weaponId ||
+      s.equipped.defensive.weapon?.id === weaponId
+    )
+    
+    if (isEquipped) {
+      get().addNotification('Cannot scrap an equipped weapon.', 'warning')
+      return
+    }
+    
+    // Calculate scrap value based on rarity
+    const scrapValues: Record<string, number> = {
+      common: 5,
+      uncommon: 10,
+      rare: 20,
+      unique: 40,
+    }
+    
+    const metalGain = scrapValues[weapon.rarity] * weapon.level
+    
+    set({
+      weapons: state.weapons.filter(w => w.id !== weaponId),
+    })
+    get().addResources({ metal: metalGain })
+    get().addNotification(`Scrapped ${weapon.name} for ${metalGain} metal.`, 'info')
   },
 }))

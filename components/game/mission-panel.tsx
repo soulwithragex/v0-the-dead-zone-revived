@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useGameStore, type Mission, type DangerLevel } from '@/lib/game-store'
+import { useGameStore, type Mission, type DangerLevel, type ResourceType } from '@/lib/game-store'
 import { cn } from '@/lib/utils'
 
 const dangerColors: Record<DangerLevel, { bg: string; text: string; label: string }> = {

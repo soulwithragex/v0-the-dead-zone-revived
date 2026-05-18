@@ -1,136 +1,160 @@
 'use client'
 
-import { useGameStore, type ItemType } from '@/lib/game-store'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { useGameStore } from '@/lib/game-store'
 import { cn } from '@/lib/utils'
-import { 
-  Swords, 
-  Utensils, 
-  Droplets, 
-  Plus, 
-  Package,
-  Crosshair
-} from 'lucide-react'
-
-const typeIcons: Record<ItemType, typeof Package> = {
-  weapon: Swords,
-  food: Utensils,
-  water: Droplets,
-  medical: Plus,
-  material: Package,
-  ammo: Crosshair
-}
-
-const typeColors: Record<ItemType, string> = {
-  weapon: 'text-red-400 bg-red-500/20',
-  food: 'text-amber-400 bg-amber-500/20',
-  water: 'text-blue-400 bg-blue-500/20',
-  medical: 'text-green-400 bg-green-500/20',
-  material: 'text-orange-400 bg-orange-500/20',
-  ammo: 'text-yellow-400 bg-yellow-500/20'
-}
+import { Package, Swords } from 'lucide-react'
 
 export function InventoryPanel() {
-  const { inventory, survivors, useItem, equipItem } = useGameStore()
+  const { inventory, weapons, survivors, equipWeapon } = useGameStore()
 
-  const groupedItems = inventory.reduce((acc, item) => {
-    if (!acc[item.type]) acc[item.type] = []
-    acc[item.type].push(item)
-    return acc
-  }, {} as Record<ItemType, typeof inventory>)
-
-  const itemTypes: ItemType[] = ['weapon', 'medical', 'food', 'water', 'ammo', 'material']
+  const rarityColors = {
+    common: 'text-stone-300 border-stone-500',
+    uncommon: 'text-blue-400 border-blue-500',
+    rare: 'text-purple-400 border-purple-500',
+    unique: 'text-orange-400 border-orange-500',
+  }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-foreground">
-        Inventory ({inventory.reduce((sum, i) => sum + i.quantity, 0)} items)
+      <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+        <Package className="w-5 h-5" />
+        Inventory
       </h2>
 
-      {inventory.length === 0 ? (
-        <Card className="bg-secondary/30 border-dashed">
-          <CardContent className="p-8 text-center">
-            <Package className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-muted-foreground">Your inventory is empty</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {itemTypes.map((type) => {
-            const items = groupedItems[type]
-            if (!items || items.length === 0) return null
-
-            const Icon = typeIcons[type]
-
-            return (
-              <Card key={type}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2 capitalize">
-                    <div className={cn("p-1.5 rounded", typeColors[type])}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    {type}s
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between bg-secondary/50 rounded-lg p-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{item.icon}</span>
-                          <div>
-                            <div className="font-medium text-foreground">{item.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {item.damage && `Damage: ${item.damage}`}
-                              {item.healing && `Healing: +${item.healing}`}
-                              {item.weaponType && ` • ${item.weaponType}`}
-                            </div>
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="text-lg font-mono">
-                          x{item.quantity}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+      {/* Weapons Section */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="bg-secondary/50 px-4 py-3 border-b border-border">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <Swords className="w-4 h-4 text-red-400" />
+            Weapons ({weapons.length})
+          </h3>
         </div>
-      )}
-
-      {/* Quick use section */}
-      {survivors.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Quick Use</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Select a survivor from the Survivors tab to use items on them directly.
+        <div className="p-4">
+          {weapons.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No weapons in inventory. Send survivors on missions to find more!
             </p>
-            <div className="flex flex-wrap gap-2">
-              {survivors.slice(0, 3).map((survivor) => (
-                <div key={survivor.id} className="bg-secondary/50 rounded-lg p-2 flex items-center gap-2">
-                  <span className="text-xl">{survivor.avatar}</span>
-                  <div>
-                    <div className="text-sm font-medium">{survivor.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      HP: {Math.floor(survivor.health)}/{survivor.maxHealth}
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {weapons.map((weapon) => (
+                <div
+                  key={weapon.id}
+                  className={cn(
+                    "bg-secondary/30 rounded-lg p-3 border-l-4",
+                    rarityColors[weapon.rarity]
+                  )}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className={cn("font-medium", rarityColors[weapon.rarity].split(' ')[0])}>
+                        {weapon.name}
+                      </h4>
+                      <div className="text-xs text-muted-foreground capitalize">
+                        {weapon.type} | Lv.{weapon.level}
+                      </div>
                     </div>
+                    <span className={cn(
+                      "text-[10px] uppercase px-1.5 py-0.5 rounded",
+                      weapon.rarity === 'unique' ? 'bg-orange-500/20' :
+                      weapon.rarity === 'rare' ? 'bg-purple-500/20' :
+                      weapon.rarity === 'uncommon' ? 'bg-blue-500/20' : 'bg-stone-500/20'
+                    )}>
+                      {weapon.rarity}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2 text-xs mb-3">
+                    <div className="bg-black/20 rounded px-2 py-1">
+                      <div className="text-muted-foreground">DMG</div>
+                      <div className="font-bold text-red-400">{weapon.damage}</div>
+                    </div>
+                    <div className="bg-black/20 rounded px-2 py-1">
+                      <div className="text-muted-foreground">ACC</div>
+                      <div className="font-bold text-blue-400">{weapon.accuracy}%</div>
+                    </div>
+                    <div className="bg-black/20 rounded px-2 py-1">
+                      <div className="text-muted-foreground">DPS</div>
+                      <div className="font-bold text-green-400">{weapon.dps}</div>
+                    </div>
+                  </div>
+
+                  {/* Quick equip buttons */}
+                  {survivors.filter(s => s.status !== 'mission').length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {survivors.filter(s => s.status !== 'mission').slice(0, 3).map((survivor) => (
+                        <button
+                          key={survivor.id}
+                          onClick={() => equipWeapon(survivor.id, weapon.id, 'offensive')}
+                          className="text-[10px] bg-secondary hover:bg-secondary/80 text-foreground px-2 py-1 rounded transition-colors"
+                          title={`Equip to ${survivor.name}`}
+                        >
+                          {survivor.name.split(' ')[0]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Items Section */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="bg-secondary/50 px-4 py-3 border-b border-border">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <Package className="w-4 h-4 text-amber-400" />
+            Items ({inventory.length})
+          </h3>
+        </div>
+        <div className="p-4">
+          {inventory.length === 0 ? (
+            <div className="text-center py-8">
+              <Package className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-muted-foreground">Your inventory is empty</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Send survivors on missions to gather items
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {inventory.map((item) => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "bg-secondary/30 rounded-lg p-3 border",
+                    rarityColors[item.rarity]
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={cn("font-medium text-sm", rarityColors[item.rarity].split(' ')[0])}>
+                      {item.name}
+                    </span>
+                    <span className="text-lg font-bold text-foreground">
+                      x{item.quantity}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground capitalize mt-1">
+                    {item.type} | Lv.{item.level}
                   </div>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </div>
+      </div>
+
+      {/* Tips */}
+      <div className="bg-secondary/30 rounded-lg p-4 border border-border">
+        <h3 className="text-sm font-semibold text-foreground mb-2">Inventory Tips</h3>
+        <ul className="text-xs text-muted-foreground space-y-1">
+          <li>- Equip weapons to survivors for missions and defense</li>
+          <li>- Higher rarity weapons deal more damage</li>
+          <li>- Different weapon types suit different classes</li>
+          <li>- Medical items can heal injured survivors</li>
+        </ul>
+      </div>
     </div>
   )
 }

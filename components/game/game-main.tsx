@@ -8,6 +8,7 @@ import { BuildingPanel } from './building-panel'
 import { MissionPanel } from './mission-panel'
 import { InventoryPanel } from './inventory-panel'
 import { CombatPanel } from './combat-panel'
+import { CraftingPanel } from './crafting-panel'
 import { NotificationSystem } from './notification-system'
 import { GameOverScreen } from './game-over-screen'
 import { StartScreen } from './start-screen'
@@ -22,7 +23,8 @@ import {
   Sun,
   Moon,
   Pause,
-  Play
+  Play,
+  Hammer
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'

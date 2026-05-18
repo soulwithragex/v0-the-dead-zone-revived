@@ -7,8 +7,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'The Dead Zone Revived - Zombie Survival Game',
-  description: 'Survive the apocalypse. Build your base. Lead your survivors. A browser-based zombie survival game inspired by The Last Stand: Dead Zone.',
+  title: 'The Dead Zone: Revived',
+  description: 'A zombie survival management game inspired by The Last Stand: Dead Zone',
   generator: 'v0.app',
   icons: {
     icon: [

@@ -53,15 +53,10 @@ const statusInfo: Record<string, { label: string; color: string }> = {
 }
 
 export function SurvivorPanel() {
-  const { survivors, selectedSurvivor, selectSurvivor, weapons, equipWeapon, assignSurvivorClass, healSurvivor } = useGameStore()
+  const { survivors, selectedSurvivor, selectSurvivor, weapons, equipWeapon, assignSurvivorClass, healSurvivor, updateSurvivorState } = useGameStore()
   const [showClassSelect, setShowClassSelect] = useState<string | null>(null)
 
   const selected = survivors.find(s => s.id === selectedSurvivor)
-
-  const updateSurvivorStatus = (id: string, status: Survivor['status']) => {
-    const store = useGameStore.getState()
-    store.survivors = store.survivors.map(s => s.id === id ? { ...s, status } : s)
-  }
 
   const renderSurvivorCard = (survivor: Survivor) => {
     const classData = classInfo[survivor.class]
@@ -375,11 +370,9 @@ export function SurvivorPanel() {
           </button>
           <button
             onClick={() => {
-              const store = useGameStore.getState()
-              const newSurvivors = store.survivors.map(s => 
-                s.id === survivor.id ? { ...s, status: (survivor.status === 'resting' ? 'idle' : 'resting') as Survivor['status'] } : s
-              )
-              useGameStore.setState({ survivors: newSurvivors })
+              updateSurvivorState(survivor.id, { 
+                status: survivor.status === 'resting' ? 'idle' : 'resting'
+              })
             }}
             disabled={survivor.status === 'mission' || survivor.injured}
             className={cn(
@@ -393,11 +386,9 @@ export function SurvivorPanel() {
           </button>
           <button
             onClick={() => {
-              const store = useGameStore.getState()
-              const newSurvivors = store.survivors.map(s => 
-                s.id === survivor.id ? { ...s, status: (survivor.status === 'defending' ? 'idle' : 'defending') as Survivor['status'] } : s
-              )
-              useGameStore.setState({ survivors: newSurvivors })
+              updateSurvivorState(survivor.id, { 
+                status: survivor.status === 'defending' ? 'idle' : 'defending'
+              })
             }}
             disabled={survivor.status === 'mission' || survivor.injured}
             className={cn(

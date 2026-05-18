@@ -73,16 +73,16 @@ export function StartScreen() {
         <div className="mt-8 bg-card/50 border border-border rounded-lg p-4 text-left max-w-md mx-auto">
           <h3 className="text-sm font-semibold text-foreground mb-2">Quick Start Guide:</h3>
           <ul className="text-xs text-muted-foreground space-y-1">
-            <li>• <strong className="text-foreground">Base:</strong> Build structures to improve your compound</li>
-            <li>• <strong className="text-foreground">Survivors:</strong> Manage health, hunger, and assign tasks</li>
-            <li>• <strong className="text-foreground">Missions:</strong> Send survivors to scavenge for supplies</li>
-            <li>• <strong className="text-foreground">Combat:</strong> Defend against zombie hordes at night</li>
+            <li>- <strong className="text-foreground">Base:</strong> Build structures to improve your compound</li>
+            <li>- <strong className="text-foreground">Survivors:</strong> Manage health, hunger, and assign tasks</li>
+            <li>- <strong className="text-foreground">Missions:</strong> Send survivors to scavenge for supplies</li>
+            <li>- <strong className="text-foreground">Combat:</strong> Defend against zombie hordes at night</li>
           </ul>
         </div>
 
         {/* Footer */}
         <p className="mt-8 text-xs text-muted-foreground">
-          Inspired by The Last Stand: Dead Zone • Built with Next.js
+          Inspired by The Last Stand: Dead Zone
         </p>
       </div>
     </div>

@@ -7,135 +7,11 @@ import { cn } from '@/lib/utils'
 const MAP_WIDTH = 800
 const MAP_HEIGHT = 550
 
-// Building visual data
-const buildingVisuals: Record<string, { 
-  color: string
-  borderColor: string
-  icon: React.ReactNode
-}> = {
-  warehouse: {
-    color: 'bg-stone-700',
-    borderColor: 'border-stone-500',
-    icon: <WarehouseIcon />,
-  },
-  rally_flag: {
-    color: 'bg-red-900/80',
-    borderColor: 'border-red-700',
-    icon: <FlagIcon />,
-  },
-  small_barricade: {
-    color: 'bg-amber-900/80',
-    borderColor: 'border-amber-700',
-    icon: <BarricadeIcon />,
-  },
-  large_barricade: {
-    color: 'bg-amber-800/80',
-    borderColor: 'border-amber-600',
-    icon: <BarricadeIcon />,
-  },
-  watchtower: {
-    color: 'bg-slate-700/80',
-    borderColor: 'border-slate-500',
-    icon: <TowerIcon />,
-  },
-  bed: {
-    color: 'bg-indigo-900/80',
-    borderColor: 'border-indigo-700',
-    icon: <BedIcon />,
-  },
-  vegetable_garden: {
-    color: 'bg-green-900/80',
-    borderColor: 'border-green-700',
-    icon: <GardenIcon />,
-  },
-  water_collector: {
-    color: 'bg-cyan-900/80',
-    borderColor: 'border-cyan-700',
-    icon: <WaterIcon />,
-  },
-  metal_storage: {
-    color: 'bg-zinc-700/80',
-    borderColor: 'border-zinc-500',
-    icon: <StorageIcon />,
-  },
-  food_storage: {
-    color: 'bg-orange-900/80',
-    borderColor: 'border-orange-700',
-    icon: <StorageIcon />,
-  },
-}
-
-function WarehouseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M3 21h18M3 7v14M21 7v14M6 21V10M18 21V10M6 10h12M9 14h6M9 17h6M12 3L3 7h18L12 3z" />
-    </svg>
-  )
-}
-
-function FlagIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M4 21V4M4 4l12 4-12 4" />
-    </svg>
-  )
-}
-
-function BarricadeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2" y="8" width="20" height="12" rx="1" />
-      <path d="M6 8V6M12 8V4M18 8V6M2 14h20" />
-    </svg>
-  )
-}
-
-function TowerIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M12 2L8 6v4l-4 2v10h4v-6h8v6h4V12l-4-2V6l-4-4zM8 12h8" />
-    </svg>
-  )
-}
-
-function BedIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M2 18v-6a2 2 0 012-2h16a2 2 0 012 2v6M2 18h20M4 10V6a2 2 0 012-2h4v6M6 8a1 1 0 100-2 1 1 0 000 2z" />
-    </svg>
-  )
-}
-
-function GardenIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M12 22V12M12 12c-3-3-6 0-6 3 0-3-3-6-6-3M12 12c3-3 6 0 6 3 0-3 3-6 6-3M7 22h10" />
-    </svg>
-  )
-}
-
-function WaterIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M12 2L6 12a6 6 0 1012 0L12 2z" />
-    </svg>
-  )
-}
-
-function StorageIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
-    </svg>
-  )
-}
-
 export function CompoundMap() {
   const { 
     buildings, 
     survivors, 
-    hordes, 
+    zombieWaves, 
     isNight,
     junkPiles,
     playerPosition,
@@ -146,9 +22,10 @@ export function CompoundMap() {
     setSelectedTab,
     selectSurvivor,
     selectedSurvivor,
+    day,
   } = useGameStore()
 
-  const mapRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<SVGSVGElement>(null)
   const [walkFrame, setWalkFrame] = useState(0)
   const [clickIndicator, setClickIndicator] = useState<{ x: number; y: number } | null>(null)
   const [hoveredBuilding, setHoveredBuilding] = useState<string | null>(null)
@@ -168,12 +45,14 @@ export function CompoundMap() {
   }, [playerMoving])
 
   // Handle click on map
-  const handleMapClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMapClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!mapRef.current) return
 
     const rect = mapRef.current.getBoundingClientRect()
-    const x = Math.max(40, Math.min(MAP_WIDTH - 40, e.clientX - rect.left))
-    const y = Math.max(40, Math.min(MAP_HEIGHT - 40, e.clientY - rect.top))
+    const scaleX = MAP_WIDTH / rect.width
+    const scaleY = MAP_HEIGHT / rect.height
+    const x = Math.max(40, Math.min(MAP_WIDTH - 40, (e.clientX - rect.left) * scaleX))
+    const y = Math.max(40, Math.min(MAP_HEIGHT - 40, (e.clientY - rect.top) * scaleY))
 
     setClickIndicator({ x, y })
     setTimeout(() => setClickIndicator(null), 400)
@@ -183,7 +62,7 @@ export function CompoundMap() {
 
   const handleBuildingClick = (buildingId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setSelectedTab('buildings')
+    setSelectedTab('base')
   }
 
   const handleSurvivorClick = (survivorId: string, e: React.MouseEvent) => {
@@ -349,7 +228,7 @@ export function CompoundMap() {
   // Get attacking zombies positions
   const getZombiePositions = () => {
     const positions: { x: number; y: number }[] = []
-    hordes.filter(h => h.status === 'attacking').forEach(horde => {
+    zombieWaves.filter(h => h.status === 'attacking').forEach(horde => {
       const count = Math.min(horde.count, 15)
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5
@@ -376,16 +255,16 @@ export function CompoundMap() {
           <span className="text-xs font-medium text-white/80 uppercase tracking-wider">Compound View</span>
         </div>
         <div className="text-xs text-white/60">
-          Click to move | Day {useGameStore.getState().day}
+          Click to move | Day {day}
         </div>
       </div>
 
       {/* SVG Map */}
       <svg 
-        ref={mapRef as unknown as React.Ref<SVGSVGElement>}
+        ref={mapRef}
         viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
         className="w-full h-[500px] lg:h-[550px] cursor-crosshair"
-        onClick={handleMapClick as unknown as React.MouseEventHandler<SVGSVGElement>}
+        onClick={handleMapClick}
         style={{ background: 'transparent' }}
       >
         {/* Definitions */}
@@ -400,11 +279,6 @@ export function CompoundMap() {
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <rect width="40" height="40" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
           </pattern>
-          <pattern id="concrete" width="4" height="4" patternUnits="userSpaceOnUse">
-            <rect width="4" height="4" fill="#3a3a3a"/>
-            <circle cx="1" cy="1" r="0.5" fill="#444"/>
-            <circle cx="3" cy="3" r="0.3" fill="#333"/>
-          </pattern>
         </defs>
 
         {/* Grid background */}
@@ -414,20 +288,6 @@ export function CompoundMap() {
         {isNight && (
           <rect width="100%" height="100%" fill="rgba(10, 20, 40, 0.5)" />
         )}
-
-        {/* Ground details - debris, cracks */}
-        <g opacity="0.4">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <ellipse
-              key={`debris-${i}`}
-              cx={100 + Math.random() * 600}
-              cy={80 + Math.random() * 400}
-              rx={3 + Math.random() * 8}
-              ry={2 + Math.random() * 4}
-              fill="#2a2a2a"
-            />
-          ))}
-        </g>
 
         {/* Perimeter fence */}
         <rect 
@@ -450,14 +310,6 @@ export function CompoundMap() {
           rx="2"
         />
 
-        {/* Road/path around compound */}
-        <path
-          d={`M 60,${MAP_HEIGHT/2} L 150,${MAP_HEIGHT/2} M ${MAP_WIDTH - 150},${MAP_HEIGHT/2} L ${MAP_WIDTH - 60},${MAP_HEIGHT/2}`}
-          stroke="#3a3a3a"
-          strokeWidth="30"
-          fill="none"
-        />
-
         {/* Junk piles */}
         {junkPiles.map((junk) => (
           <g key={junk.id} transform={`translate(${junk.position.x}, ${junk.position.y})`}>
@@ -470,11 +322,6 @@ export function CompoundMap() {
 
         {/* Buildings */}
         {buildings.map((building) => {
-          const visual = buildingVisuals[building.type] || {
-            color: 'bg-gray-700',
-            borderColor: 'border-gray-500',
-            icon: <StorageIcon />,
-          }
           const isHovered = hoveredBuilding === building.id
 
           return (
@@ -516,25 +363,15 @@ export function CompoundMap() {
               
               {/* Icon */}
               <g transform={`translate(${building.size.width/2 - 12}, ${building.size.height/2 - 16})`}>
-                <rect width="24" height="24" fill="none" />
-                <g className="text-white/70" transform="scale(0.8)" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  {/* Simplified icon representation */}
-                  {building.type === 'warehouse' && (
-                    <>
-                      <rect x="2" y="10" width="20" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M12 2L2 10h20L12 2z" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                    </>
-                  )}
-                  {building.type === 'rally_flag' && (
-                    <path d="M4 20V4M4 4l10 4-10 4" fill="none" stroke="#ef4444" strokeWidth="2" />
-                  )}
-                  {(building.type === 'small_barricade' || building.type === 'large_barricade') && (
-                    <>
-                      <rect x="2" y="8" width="20" height="10" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M6 8V5M12 8V3M18 8V5" stroke="currentColor" strokeWidth="1.5" />
-                    </>
-                  )}
-                </g>
+                {building.type === 'warehouse' && (
+                  <g stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none">
+                    <rect x="2" y="10" width="20" height="12" />
+                    <path d="M12 2L2 10h20L12 2z" />
+                  </g>
+                )}
+                {building.type === 'rally_flag' && (
+                  <path d="M4 20V4M4 4l10 4-10 4" fill="none" stroke="#ef4444" strokeWidth="2" />
+                )}
               </g>
               
               {/* Building name */}
@@ -577,24 +414,24 @@ export function CompoundMap() {
         })}
 
         {/* Other survivors */}
-        {otherSurvivors.map((survivor, index) => {
-          const angle = (index / Math.max(otherSurvivors.length, 1)) * Math.PI * 1.5 - Math.PI / 4
-          const radius = 120 + (index % 3) * 40
-          const x = MAP_WIDTH/2 + Math.cos(angle) * radius
-          const y = MAP_HEIGHT/2 + Math.sin(angle) * radius * 0.6
-          
-          return (
-            <g key={survivor.id}>
-              {renderSurvivorSprite(survivor, x, y, false, survivor.isMoving, survivor.direction, 0)}
-              {/* Name tag */}
-              <text x={x} y={y + 38} textAnchor="middle" fontSize="9" fill="#ccc" fontWeight="500">
-                {survivor.name.split(' ')[0]}
-              </text>
-            </g>
-          )
-        })}
+        {otherSurvivors.map((survivor) => (
+          <g key={survivor.id}>
+            {renderSurvivorSprite(
+              survivor,
+              survivor.position.x,
+              survivor.position.y,
+              false,
+              survivor.isMoving,
+              survivor.direction,
+              walkFrame
+            )}
+          </g>
+        ))}
 
-        {/* Player character (Leader) */}
+        {/* Zombies */}
+        {zombiePositions.map((pos, index) => renderZombieSprite(pos.x, pos.y, index))}
+
+        {/* Player/Leader */}
         {leader && renderSurvivorSprite(
           leader,
           playerPosition.x,
@@ -605,82 +442,46 @@ export function CompoundMap() {
           walkFrame
         )}
 
-        {/* Zombies */}
-        {zombiePositions.map((pos, i) => renderZombieSprite(pos.x, pos.y, i))}
-
         {/* Click indicator */}
         {clickIndicator && (
           <g transform={`translate(${clickIndicator.x}, ${clickIndicator.y})`}>
-            <circle r="15" fill="none" stroke="#22c55e" strokeWidth="2" opacity="0.8">
-              <animate attributeName="r" from="5" to="20" dur="0.4s" fill="freeze" />
-              <animate attributeName="opacity" from="1" to="0" dur="0.4s" fill="freeze" />
-            </circle>
-            <circle r="3" fill="#22c55e" opacity="0.8">
-              <animate attributeName="opacity" from="1" to="0" dur="0.4s" fill="freeze" />
-            </circle>
+            <circle r="15" fill="none" stroke="#22c55e" strokeWidth="2" className="click-ripple" />
+            <circle r="3" fill="#22c55e" />
           </g>
         )}
 
-        {/* Target marker */}
+        {/* Target indicator */}
         {playerTargetPosition && playerMoving && (
           <g transform={`translate(${playerTargetPosition.x}, ${playerTargetPosition.y})`}>
-            <rect x="-6" y="-6" width="12" height="12" fill="none" stroke="#22c55e" strokeWidth="2" transform="rotate(45)" opacity="0.6">
-              <animate attributeName="opacity" values="0.6;0.3;0.6" dur="1s" repeatCount="indefinite" />
-            </rect>
+            <circle r="8" fill="none" stroke="#22c55e" strokeWidth="1" strokeDasharray="4 2">
+              <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="1;0.5;1" dur="1s" repeatCount="indefinite" />
+            </circle>
           </g>
         )}
       </svg>
 
-      {/* Status overlay */}
-      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end z-30 pointer-events-none">
-        {/* Controls hint */}
-        <div className="bg-black/70 backdrop-blur-sm rounded px-3 py-2 text-xs text-white/70 pointer-events-auto">
-          <div className="flex items-center gap-2">
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 8v8M8 12h8" />
-            </svg>
-            <span>Click to move</span>
-          </div>
-        </div>
-
-        {/* Mini legend */}
-        <div className="bg-black/70 backdrop-blur-sm rounded px-3 py-2 text-xs text-white/70 space-y-1 pointer-events-auto">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+      {/* Legend */}
+      <div className="absolute bottom-2 left-2 bg-black/60 rounded px-3 py-2 text-[10px] text-white/60">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
             <span>Idle</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-blue-500" />
             <span>Defending</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-            <span>On Mission</span>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-yellow-500" />
+            <span>Mission</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-red-500" />
             <span>Injured</span>
           </div>
         </div>
       </div>
-
-      {/* Alert overlay for hordes */}
-      {hordes.length > 0 && (
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-red-900/90 text-white px-4 py-2 rounded-lg border border-red-700 animate-pulse z-50">
-          <div className="flex items-center gap-2">
-            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 9v4M12 17h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-bold uppercase tracking-wider text-sm">
-              {hordes[0].status === 'approaching' 
-                ? `HORDE APPROACHING: ${hordes[0].timeUntilAttack}s`
-                : `UNDER ATTACK: ${hordes[0].count} INFECTED`
-              }
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
